@@ -1,17 +1,22 @@
+import 'package:flutter/material.dart';
+
 import 'models/exercise.dart';
 import 'models/exercise_guide.dart';
 import 'models/workout_plan.dart';
-import 'package:flutter/material.dart';
 
-import 'pages/detail_latihan.dart';
-import 'pages/persiapan_latihan.dart';
+import 'pages/pose_detection_image.dart';
 import 'theme.dart';
 
-void main() {
-  runApp(const MyApp());
+import 'dart:async';
+
+Future<void> main() async
+{
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatelessWidget
+{
   const MyApp({super.key});
 
   // This widget is the root of your application.
@@ -21,7 +26,8 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       theme: appTheme,
       debugShowCheckedModeBanner: false,
-      home: DetailLatihan(workoutPlan: workoutPlan),
+      home: PoseDetectionDemo(),
+      // home: DetailLatihan(workoutPlan: workoutPlan),
     );
   }
 }
@@ -99,3 +105,6 @@ final WorkoutPlan workoutPlan =
       ),
     ],
   );
+
+
+
