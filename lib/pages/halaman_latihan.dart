@@ -8,7 +8,7 @@ class DailyPostureExerciseScreen extends StatelessWidget {
     {'name': 'Plank', 'duration': '1x1 Menit'},
   ];
 
-  const DailyPostureExerciseScreen({super.key});
+  DailyPostureExerciseScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

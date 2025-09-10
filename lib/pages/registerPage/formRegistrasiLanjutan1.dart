@@ -17,7 +17,7 @@ class _RegistrasiLanjutan1State extends State<RegistrasiLanjutan1> {
   String? _selectedGender;
   final List<String> _genderOptions = ['Laki-laki', 'Perempuan'];
   String? _selectedDisability;
-  final List<String> _disabilityOptions = ['Tidak Ada', 'Kursi Roda', 'Tuna Netra'];
+  final List<String> _disabilityOptions = ['Tidak Ada', 'Tuna Daksa (Kaki)', 'Tuna Netra'];
 
   // Fungsi untuk menampilkan Date Picker
   Future<void> _selectDate(BuildContext context) async {

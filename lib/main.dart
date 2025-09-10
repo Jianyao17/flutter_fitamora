@@ -33,7 +33,7 @@ final WorkoutPlan workoutPlan = WorkoutPlan(
   title: 'Latihan Kaki',
   description:
       'Memperkuat otot paha, betis, dan glutes untuk fondasi tubuh yang kokoh.',
-  imageUrl:
+  imagePath:
       'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&w=600',
   exercises: [
     Exercise(

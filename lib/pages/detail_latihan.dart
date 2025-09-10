@@ -81,7 +81,7 @@ class DetailLatihan extends StatelessWidget
           ClipRRect(
             borderRadius: BorderRadius.circular(15.0),
             child: Image.network(
-              workoutPlan.imageUrl ?? 'https://via.placeholder.com/80',
+              workoutPlan.imagePath ?? 'https://via.placeholder.com/80',
               width: 80,
               height: 80,
               fit: BoxFit.cover,

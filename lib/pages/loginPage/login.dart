@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../HomePage.dart';
 import '../registerPage/register.dart';
 import 'lupaPassword.dart';
 
@@ -169,7 +170,11 @@ class _LoginPageState extends State<LoginPage> {
 
                           // Tombol Masuk
                           ElevatedButton(
-                            onPressed: () {},
+                            onPressed: () {  Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (context) => const HomePage(),
+                              ),
+                            );},
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF003366), // Warna biru tua
                               foregroundColor: Colors.white,
