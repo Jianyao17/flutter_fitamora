@@ -12,11 +12,9 @@ final appTheme = ThemeData(
     primary: primaryColor,
     secondary: secondaryColor,
     surface: Colors.white,
-    background: tertiaryColor,
     onPrimary: textColor,
     onSecondary: Colors.white,
     onSurface: textColor,
-    onBackground: textColor,
   ),
 
   scaffoldBackgroundColor: tertiaryColor,
