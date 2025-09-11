@@ -11,24 +11,25 @@ class WorkoutListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1E1E1E), // Latar belakang gelap
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E1E1E),
+        backgroundColor: Colors.transparent, // Atau sama dengan Scaffold
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text('Workouts', style: TextStyle(color: Colors.white)),
+        //title: const Text('Workouts', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(), // <-- TAMBAHKAN BARIS INI
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSectionTitle('Single Workout'),
             ...singleWorkouts.map((workout) => _buildWorkoutCard(context, workout)).toList(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 44),
             _buildSectionTitle('Mixed Workout'),
             ...mixedWorkouts.map((workout) => _buildWorkoutCard(context, workout)).toList(),
           ],
@@ -43,8 +44,8 @@ class WorkoutListPage extends StatelessWidget {
       child: Text(
         title,
         style: const TextStyle(
-          color: Colors.white,
-          fontSize: 22,
+          color: Colors.black,
+          fontSize: 25,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -69,15 +70,15 @@ class WorkoutListPage extends StatelessWidget {
             );
           },
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 12.0),
             child: Row(
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.asset(
                     workout.imagePath,
-                    width: 70,
-                    height: 70,
+                    width: 100, // UKURAN GAMBAR
+                    height: 100,
                     fit: BoxFit.cover,
                   ),
                 ),
