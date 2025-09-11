@@ -1,4 +1,4 @@
-// pages/workout_list_page.dart
+// pages/workout_list_page.dart - Alternative dengan ListView.builder
 
 import 'package:flutter/material.dart';
 import '../data/dummy_data.dart';
@@ -10,30 +10,45 @@ class WorkoutListPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Gabungkan semua workouts dengan divider
+    final List<dynamic> allItems = [
+      'Single Workout', // Header
+      ...singleWorkouts,
+      'divider',
+      'Mixed Workout', // Header
+      ...mixedWorkouts,
+    ];
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: Colors.transparent, // Atau sama dengan Scaffold
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        //title: const Text('Workouts', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
       ),
-      body: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(), // <-- TAMBAHKAN BARIS INI
+      body: ListView.builder(
+        physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSectionTitle('Single Workout'),
-            ...singleWorkouts.map((workout) => _buildWorkoutCard(context, workout)).toList(),
-            const SizedBox(height: 44),
-            _buildSectionTitle('Mixed Workout'),
-            ...mixedWorkouts.map((workout) => _buildWorkoutCard(context, workout)).toList(),
-          ],
-        ),
+        itemCount: allItems.length,
+        itemBuilder: (context, index) {
+          final item = allItems[index];
+
+          if (item is String && item != 'divider') {
+            // Section header
+            return _buildSectionTitle(item);
+          } else if (item == 'divider') {
+            // Divider between sections
+            return const SizedBox(height: 44);
+          } else if (item is Workout) {
+            // Workout card
+            return _buildWorkoutCard(context, item);
+          }
+
+          return const SizedBox.shrink();
+        },
       ),
     );
   }
@@ -56,12 +71,11 @@ class WorkoutListPage extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Material(
-        color: const Color(0xFFFBC93D), // Kuning
+        color: const Color(0xFFFBC93D),
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            // Navigasi ke halaman detail
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -77,9 +91,24 @@ class WorkoutListPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   child: Image.asset(
                     workout.imagePath,
-                    width: 100, // UKURAN GAMBAR
+                    width: 100,
                     height: 100,
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.fitness_center,
+                          size: 40,
+                          color: Colors.grey,
+                        ),
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(width: 16),

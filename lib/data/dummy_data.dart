@@ -40,7 +40,7 @@ final List<Workout> singleWorkouts = [
   Workout(
     title: 'Latihan Lengan',
     description: 'Bentuk lengan yang kencang dan definisikan otot bahu dengan latihan yang menantang ini.',
-    imagePath: 'assets/build/a1.png',
+    imagePath: 'assets/build/latihan_tangan.jpg',
     movements: [
       Movement(
         name: 'Arm Raises',
@@ -71,7 +71,7 @@ final List<Workout> singleWorkouts = [
   Workout(
     title: 'Latihan Dada',
     description: 'Bangun kekuatan dan daya tahan otot dada dengan fokus pada gerakan push-up yang efektif.',
-    imagePath: 'assets/build/a1.png',
+    imagePath: 'assets/build/latihan_dada.png',
     movements: [
       Movement(
         name: 'Jumping Jacks',
@@ -96,7 +96,7 @@ final List<Workout> singleWorkouts = [
   Workout(
     title: 'Latihan Kaki',
     description: 'Perkuat fondasi tubuh Anda dengan melatih otot kaki, paha, dan glutes secara menyeluruh.',
-    imagePath: 'assets/build/a1.png',
+    imagePath: 'assets/build/latihan_kaki.jpg',
     movements: [
       Movement(
         name: 'Squats',
@@ -127,7 +127,7 @@ final List<Workout> singleWorkouts = [
   Workout(
     title: 'Shoulder and Back',
     description: 'Tingkatkan kekuatan bahu dan punggung bagian atas, penting untuk postur tubuh yang tegap.',
-    imagePath: 'assets/build/a1.png',
+    imagePath: 'assets/build/latihan_shoulder.png',
     movements: [
       Movement(
         name: 'Jumping Jacks',
