@@ -1,7 +1,8 @@
+import 'package:flutter/material.dart';
+
 import 'models/exercise.dart';
 import 'models/exercise_guide.dart';
 import 'models/workout_plan.dart';
-import 'package:flutter/material.dart';
 
 import 'pages/hasil_deteksi.dart';
 import 'pages/loginPage/login.dart';
