@@ -46,13 +46,6 @@ android {
 }
 
 dependencies {
-    // CameraX
-    val camerax_version = "1.3.4"
-    implementation("androidx.camera:camera-core:$camerax_version")
-    implementation("androidx.camera:camera-camera2:$camerax_version")
-    implementation("androidx.camera:camera-lifecycle:$camerax_version")
-    implementation("androidx.camera:camera-view:$camerax_version")
-
     // TensorFlow Lite Task Vision (Mediapipe .task model support)
     implementation("com.google.mediapipe:tasks-vision:0.10.9")
 
