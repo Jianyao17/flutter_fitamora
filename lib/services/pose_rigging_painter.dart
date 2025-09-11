@@ -5,8 +5,8 @@ import '../models/pose_detection_result.dart';
 import '../models/pose_landmark_type.dart';
 
 class PoseRiggingPainter extends CustomPainter {
-  final ui.Image image;
   final PoseDetectionResult? poseResult;
+  final Size imageSize;
 
   // Styling untuk visualisasi
   static const double _landmarkRadius = 4.0;
@@ -23,183 +23,105 @@ class PoseRiggingPainter extends CustomPainter {
   static const Color _connectionColor = Colors.white;
 
   PoseRiggingPainter({
-    required this.image,
-    this.poseResult,
+    required this.poseResult,
+    required this.imageSize,
   });
 
   @override
-  void paint(Canvas canvas, Size size) {
-    // Gambar background image
-    _drawBackgroundImage(canvas, size);
+  void paint(Canvas canvas, Size size)
+  {
+    if (poseResult == null ||
+        !poseResult!.isPoseDetected ||
+        imageSize == Size.zero)
+    { return; }
 
-    // Gambar pose rigging jika ada hasil deteksi
-    if (poseResult != null && poseResult!.isPoseDetected) {
-      _drawPoseRigging(canvas, size);
-    }
+    // Menghitung skala untuk menyesuaikan gambar kamera ke layar tanpa distorsi,
+    // dengan mempertimbangkan rotasi 90 derajat.
+    final double scaleX = size.width / imageSize.height;
+    final double scaleY = size.height / imageSize.width;
+    final double scale = scaleX < scaleY ? scaleX : scaleY;
 
-    // Gambar bounding box jika ada
-    if (poseResult?.boundingBox != null) {
-      _drawBoundingBox(canvas, size);
-    }
+    // Menghitung offset untuk memposisikan rigging di tengah layar.
+    final double offsetX = (size.width - imageSize.height * scale) / 2;
+    final double offsetY = (size.height - imageSize.width * scale) / 2;
+
+    // Gambar koneksi terlebih dahulu agar berada di belakang titik landmark.
+    _drawConnections(canvas, scale, offsetX, offsetY);
+    _drawLandmarks(canvas, scale, offsetX, offsetY);
   }
 
-  void _drawBackgroundImage(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..filterQuality = FilterQuality.high
-      ..isAntiAlias = true;
-
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      paint,
-    );
-  }
-
-  void _drawPoseRigging(Canvas canvas, Size size) {
-    if (poseResult?.landmarks.isEmpty == true) return;
-
-    // Konversi koordinat dari image space ke canvas space
-    final scaleX = size.width / image.width;
-    final scaleY = size.height / image.height;
-
-    // Gambar koneksi terlebih dahulu (supaya berada di belakang landmarks)
-    _drawConnections(canvas, scaleX, scaleY);
-
-    // Gambar landmarks
-    _drawLandmarks(canvas, scaleX, scaleY);
-  }
-
-  void _drawConnections(Canvas canvas, double scaleX, double scaleY) {
+  void _drawConnections(Canvas canvas, double scale, double offsetX, double offsetY)
+  {
     final connectionPaint = Paint()
       ..color = _connectionColor
       ..strokeWidth = _connectionStrokeWidth
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    // Shadow untuk connection lines
     final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.3)
-      ..strokeWidth = _connectionStrokeWidth + 1
+      ..color = Colors.black.withOpacity(0.5)
+      ..strokeWidth = _connectionStrokeWidth + 1.5
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1);
 
-    // Definisi koneksi pose MediaPipe
     final connections = _getPoseConnections();
+    final landmarks = poseResult!.landmarks;
 
     for (final connection in connections) {
-      final startLandmark = poseResult!.landmarks[connection.start];
-      final endLandmark = poseResult!.landmarks[connection.end];
+      final startLandmark = landmarks[connection.start];
+      final endLandmark = landmarks[connection.end];
 
-      if (startLandmark != null && endLandmark != null) {
+      if (startLandmark != null && endLandmark != null)
+      {
+        // Terapkan transformasi yang sama persis seperti pada _drawLandmarks
         final startPoint = Offset(
-          startLandmark.x * scaleX,
-          startLandmark.y * scaleY,
-        );
-        final endPoint = Offset(
-          endLandmark.x * scaleX,
-          endLandmark.y * scaleY,
-        );
+            (1.0 - startLandmark.y) * imageSize.height * scale + offsetX,
+            startLandmark.x * imageSize.width * scale + offsetY);
 
-        // Gambar shadow
+        final endPoint = Offset(
+            (1.0 - endLandmark.y) * imageSize.height * scale + offsetX,
+            endLandmark.x * imageSize.width * scale + offsetY);
+
+        // Gambar bayangan dan garis koneksi
         canvas.drawLine(startPoint, endPoint, shadowPaint);
-        // Gambar connection
         canvas.drawLine(startPoint, endPoint, connectionPaint);
       }
     }
   }
 
-  void _drawLandmarks(Canvas canvas, double scaleX, double scaleY) {
-    for (final entry in poseResult!.landmarks.entries) {
+  void _drawLandmarks(Canvas canvas, double scale, double offsetX, double offsetY)
+  {
+    for (final entry in poseResult!.landmarks.entries)
+    {
       final landmarkType = entry.key;
       final landmark = entry.value;
 
+      // Transformasi koordinat dari image space ke canvas space
+      // 1. Koordinat Y dari landmark menjadi sumbu X di layar (rotasi).
+      // 2. Gunakan `(1.0 - landmark.y)` untuk efek cermin kamera depan.
+      // 3. Koordinat X dari landmark menjadi sumbu Y di layar (rotasi).
       final point = Offset(
-        landmark.x * scaleX,
-        landmark.y * scaleY,
+        (1.0 - landmark.y) * imageSize.height * scale + offsetX,
+        landmark.x * imageSize.width * scale + offsetY,
       );
 
       final color = _getLandmarkColor(landmarkType);
+      final radius = _isJointLandmark(landmarkType) ? _jointRadius : _landmarkRadius;
 
-      // Shadow untuk landmark
-      final shadowPaint = Paint()
-        ..color = Colors.black.withOpacity(0.4)
-        ..style = PaintingStyle.fill;
-
-      // Main landmark paint
-      final landmarkPaint = Paint()
-        ..color = color
-        ..style = PaintingStyle.fill;
-
-      // Border untuk landmark
+      // Styling (diambil dari kode Anda)
+      final shadowPaint = Paint()..color = Colors.black.withOpacity(0.5);
+      final landmarkPaint = Paint()..color = color;
       final borderPaint = Paint()
-        ..color = Colors.white
+        ..color = Colors.white.withOpacity(0.8)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5;
 
-      final radius = _isJointLandmark(landmarkType) ? _jointRadius : _landmarkRadius;
-
-      // Gambar shadow
-      canvas.drawCircle(
-        Offset(point.dx + 1, point.dy + 1),
-        radius,
-        shadowPaint,
-      );
-
-      // Gambar landmark
+      // Gambar bayangan, titik landmark, dan border
+      canvas.drawCircle(Offset(point.dx + 1, point.dy + 1), radius, shadowPaint);
       canvas.drawCircle(point, radius, landmarkPaint);
-
-      // Gambar border
       canvas.drawCircle(point, radius, borderPaint);
-
-      // Gambar visibility indicator jika visibility rendah
-      if (landmark.visibility < 0.8) {
-        final visibilityPaint = Paint()
-          ..color = Colors.red.withOpacity(0.6)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2;
-
-        canvas.drawCircle(point, radius + 2, visibilityPaint);
-      }
     }
-  }
-
-  void _drawBoundingBox(Canvas canvas, Size size) {
-    if (poseResult?.boundingBox == null) return;
-
-    final bbox = poseResult!.boundingBox!;
-    final scaleX = size.width / image.width;
-    final scaleY = size.height / image.height;
-
-    final rect = Rect.fromLTRB(
-      bbox.left * scaleX,
-      bbox.top * scaleY,
-      bbox.right * scaleX,
-      bbox.bottom * scaleY,
-    );
-
-    final paint = Paint()
-      ..color = Colors.cyan
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-
-    canvas.drawRect(rect, paint);
-
-    // Label confidence
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: '${(poseResult!.confidence * 100).toStringAsFixed(1)}%',
-        style: const TextStyle(
-          color: Colors.cyan,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    );
-
-    textPainter.layout();
-    textPainter.paint(canvas, Offset(rect.left, rect.top - 16));
   }
 
   Color _getLandmarkColor(PoseLandmarkType type) {
@@ -322,8 +244,10 @@ class PoseRiggingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant PoseRiggingPainter oldDelegate) {
-    return oldDelegate.image != image || oldDelegate.poseResult != poseResult;
+  bool shouldRepaint(covariant PoseRiggingPainter oldDelegate)
+  {
+    // Hanya repaint jika data berubah untuk efisiensi
+    return oldDelegate.poseResult != poseResult || oldDelegate.imageSize != imageSize;
   }
 }
 
