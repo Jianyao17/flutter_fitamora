@@ -4,7 +4,7 @@ import 'models/exercise.dart';
 import 'models/exercise_guide.dart';
 import 'models/workout_plan.dart';
 
-import 'pages/hasil_deteksi.dart';
+import 'pages/deteksi_postur.dart';
 import 'pages/loginPage/login.dart';
 import 'pages/registerPage/formRegistrasiLanjutan1.dart';
 import 'pages/registerPage/register.dart';
@@ -24,7 +24,7 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       theme: appTheme,
       debugShowCheckedModeBanner: false,
-      home: LoginPage(),
+      home: DeteksiPosturPage(),
     );
   }
 }
