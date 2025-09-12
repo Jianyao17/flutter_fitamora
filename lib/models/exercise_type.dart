@@ -1,59 +1,148 @@
 import 'pose_detection_result.dart';
 
-class ExerciseType {
+enum ExerciseType {
+  jumpingJacks,
+  russianTwist,
+  legRaises,
+  mountainClimber,
+  plank,
+  cobraStretch,
+}
+
+enum ExerciseState {
+  waiting,
+  center,
+  up,
+  down,
+  leftDeep,
+  rightDeep,
+  leftForward,
+  rightForward,
+  holding,
+  readyToLift,
+  stretching,
+  plank,
+}
+
+class Exercise {
+  final ExerciseType type;
   final String name;
-  int count;
-  String state;
   final int targetReps;
   final bool isTimed;
   final double targetTimeSec;
-
-  bool isCorrect;
-  String feedback;
-  bool completed;
-
+  
+  int count = 0;
+  ExerciseState state = ExerciseState.waiting;
+  bool isCorrect = true;
+  String feedback = '';
+  bool completed = false;
+  
   DateTime? startTime;
-  double elapsedSec;
-  bool isHolding;
+  double elapsedSec = 0;
+  bool isHolding = false;
+  
+  // AI feedback untuk plank
+  String aiFormStatus = 'Unknown';
+  double aiConfidence = 0.0;
+  String aiFeedback = '';
 
-  String aiFormStatus;
-  double aiConfidence;
-  String aiFeedback;
-
-  ExerciseType({
+  Exercise({
+    required this.type,
     required this.name,
-    this.count = 0,
-    this.state = 'waiting',
     this.targetReps = 10,
     this.isTimed = false,
-    this.targetTimeSec = 20,
-    this.isCorrect = true,
-    this.feedback = '',
-    this.completed = false,
-    this.startTime,
-    this.elapsedSec = 0,
-    this.isHolding = false,
-    this.aiFormStatus = 'Unknown',
-    this.aiConfidence = 0.0,
-    this.aiFeedback = '',
+    this.targetTimeSec = 30.0,
   });
 
-  factory ExerciseType.forName(String name) {
-    final n = name.toLowerCase();
-    final isTimed = (n == 'plank' || n == 'cobra stretch');
-    final tTime = n == 'plank'
-        ? 30.0
-        : n == 'cobra stretch'
-        ? 30.0
-        : 20.0;
-    final tReps = isTimed ? 0 : 10;
-    return ExerciseType(name: name, targetReps: tReps, isTimed: isTimed, targetTimeSec: tTime);
+  factory Exercise.create(ExerciseType type) {
+    switch (type) {
+      case ExerciseType.jumpingJacks:
+        return Exercise(
+          type: type,
+          name: 'Jumping Jacks',
+          targetReps: 10,
+          isTimed: false,
+        );
+      case ExerciseType.russianTwist:
+        return Exercise(
+          type: type,
+          name: 'Russian Twist',
+          targetReps: 10,
+          isTimed: false,
+        );
+      case ExerciseType.legRaises:
+        return Exercise(
+          type: type,
+          name: 'Leg Raises',
+          targetReps: 10,
+          isTimed: false,
+        );
+      case ExerciseType.mountainClimber:
+        return Exercise(
+          type: type,
+          name: 'Mountain Climber',
+          targetReps: 10,
+          isTimed: false,
+        );
+      case ExerciseType.plank:
+        return Exercise(
+          type: type,
+          name: 'Plank',
+          targetReps: 0,
+          isTimed: true,
+          targetTimeSec: 30.0,
+        );
+      case ExerciseType.cobraStretch:
+        return Exercise(
+          type: type,
+          name: 'Cobra Stretch',
+          targetReps: 0,
+          isTimed: true,
+          targetTimeSec: 30.0,
+        );
+    }
+  }
+
+  void reset() {
+    count = 0;
+    state = ExerciseState.waiting;
+    isCorrect = true;
+    feedback = '';
+    completed = false;
+    startTime = null;
+    elapsedSec = 0;
+    isHolding = false;
+    aiFormStatus = 'Unknown';
+    aiConfidence = 0.0;
+    aiFeedback = '';
+  }
+
+  void updateElapsedTime() {
+    if (startTime != null && isHolding) {
+      elapsedSec = DateTime.now().difference(startTime!).inMilliseconds / 1000.0;
+    }
+  }
+
+  bool get isTargetReached {
+    if (isTimed) {
+      return elapsedSec >= targetTimeSec;
+    } else {
+      return count >= targetReps;
+    }
+  }
+
+  double get progress {
+    if (isTimed) {
+      return (elapsedSec / targetTimeSec).clamp(0.0, 1.0);
+    } else {
+      return (count / targetReps).clamp(0.0, 1.0);
+    }
   }
 }
 
 class ProcessedExerciseFrame {
   final PoseDetectionResult pose;
-  final ExerciseType exercise;
+  final Exercise exercise;
   final double fps;
   final int inferenceMs;
   final bool isPoseDetected;

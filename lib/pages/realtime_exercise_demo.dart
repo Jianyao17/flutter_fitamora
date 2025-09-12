@@ -25,14 +25,12 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
   bool _busy = false;
   String? _error;
 
-  final _exercises = <String>[
-    'Jumping Jacks',
-    'Russian Twist',
-    'Leg Raises',
-    'Mountain Climber',
-    'Plank',
-    'Cobra Stretch',
-  ];
+  final _exerciseTypes = ExerciseType.values;
+
+  // FPS tracking
+  int _frames = 0;
+  DateTime _fpsStart = DateTime.now();
+  double _fps = 0.0;
 
   @override
   void initState() {
@@ -45,7 +43,7 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
       await PoseDetectionService.initialize(runningMode: RunMode.LIVE_STREAM);
       PoseDetectionService.startListening();
 
-      await RealtimeExerciseService.I.start(exerciseName: 'Leg Raises');
+      await RealtimeExerciseService.I.start(exerciseType: ExerciseType.legRaises);
       _sub = RealtimeExerciseService.I.stream.listen((f) {
         _frame = f;
         if (mounted) setState(() {});
@@ -99,6 +97,17 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
   void _process(CameraImage image) {
     if (_busy) return;
     _busy = true;
+    
+    // Update FPS
+    _frames++;
+    final now = DateTime.now();
+    final dt = now.difference(_fpsStart).inMilliseconds;
+    if (dt >= 1000) {
+      _fps = (_frames * 1000) / dt;
+      _frames = 0;
+      _fpsStart = now;
+    }
+    
     PoseDetectionService.detectImageStream(image).whenComplete(() {
       _busy = false;
     });
@@ -114,8 +123,8 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
     super.dispose();
   }
 
-  void _switchExercise(String name) {
-    RealtimeExerciseService.I.switchExercise(name);
+  void _switchExercise(ExerciseType type) {
+    RealtimeExerciseService.I.switchExercise(type);
     setState(() {});
   }
 
@@ -144,170 +153,383 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
     final ex = _frame?.exercise ?? RealtimeExerciseService.I.current;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Realtime Exercise Demo'),
-        actions: [
-          IconButton(
-            icon: Icon(_preferredLens == CameraLensDirection.back ? Icons.camera_front : Icons.camera_rear),
-            onPressed: _toggleLens,
-            tooltip: 'Switch camera',
-          ),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _resetExercise, tooltip: 'Reset'),
-        ],
-      ),
-      body: Stack(
-        fit: StackFit.expand,
+      body: Column(
         children: [
-          CameraPreview(_camera!),
-          if (pose != null && pose.isPoseDetected)
-            CustomPaint(
-              painter: PoseRiggingPainter(
-                poseResult: pose,
-                imageSize: pose.imageSize ?? Size.zero,
-                rotationDegrees: _camera!.description.sensorOrientation,
-                mirror: _camera!.description.lensDirection == CameraLensDirection.front,
-              ),
-            ),
-          Positioned(
-            top: 12,
-            left: 12,
-            right: 12,
-            child: _TopBar(
-              current: ex.name,
-              items: _exercises,
-              onChange: _switchExercise,
-              lens: _preferredLens,
-              onToggleLens: _toggleLens,
-            ),
-          ),
-          Positioned(
-            left: 12,
-            right: 12,
-            bottom: 12,
-            child: _StatsPanel(
-              fps: _frame?.fps ?? 0.0,
-              inferenceMs: _frame?.inferenceMs ?? 0,
-              detected: _frame?.isPoseDetected ?? false,
-              ex: ex,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  final List<String> items;
-  final String current;
-  final ValueChanged<String> onChange;
-  final CameraLensDirection lens;
-  final Future<void> Function() onToggleLens;
-
-  const _TopBar({
-    required this.items,
-    required this.current,
-    required this.onChange,
-    required this.lens,
-    required this.onToggleLens,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Colors.black.withOpacity(0.5),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Row(
-          children: [
-            const Text('Exercise:', style: TextStyle(color: Colors.white)),
-            const SizedBox(width: 8),
-            DropdownButton<String>(
-              value: current,
-              dropdownColor: Colors.black87,
-              iconEnabledColor: Colors.white,
-              items: items
-                  .map((e) => DropdownMenuItem(
-                value: e,
-                child: Text(e, style: const TextStyle(color: Colors.white)),
-              ))
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) onChange(v);
-              },
-              underline: const SizedBox.shrink(),
-            ),
-            const Spacer(),
-            Text(
-              lens == CameraLensDirection.back ? 'Back Cam' : 'Front Cam',
-              style: const TextStyle(color: Colors.white70),
-            ),
-            IconButton(
-              onPressed: onToggleLens,
-              icon: Icon(lens == CameraLensDirection.back ? Icons.camera_front : Icons.camera_rear, color: Colors.white),
-              tooltip: 'Switch camera',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatsPanel extends StatelessWidget {
-  final double fps;
-  final int inferenceMs;
-  final bool detected;
-  final ExerciseType ex;
-  const _StatsPanel({required this.fps, required this.inferenceMs, required this.detected, required this.ex});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: Colors.black.withOpacity(0.55),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(
-              spacing: 16,
-              runSpacing: 8,
+          // Header kuning
+          _buildHeader(ex),
+          
+          // Area kamera dengan overlay pose
+          Expanded(
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                _chip('FPS', fps.toStringAsFixed(1)),
-                _chip('Inference', '$inferenceMs ms'),
-                _chip('Pose', detected ? 'Detected' : 'Not detected', color: detected ? Colors.green : Colors.red),
-                _chip('Exercise', ex.name),
+                CameraPreview(_camera!),
+                if (pose != null && pose.isPoseDetected)
+                  CustomPaint(
+                    painter: PoseRiggingPainter(
+                      poseResult: pose,
+                      imageSize: pose.imageSize ?? Size.zero,
+                      rotationDegrees: _camera!.description.sensorOrientation,
+                      mirror: _camera!.description.lensDirection == CameraLensDirection.front,
+                    ),
+                  ),
+                // Overlay untuk form feedback
+                _buildFormOverlay(ex),
               ],
             ),
-            const SizedBox(height: 8),
-            if (ex.isTimed)
-              Text('Time: ${ex.elapsedSec.toStringAsFixed(1)} / ${ex.targetTimeSec.toStringAsFixed(0)} s',
-                  style: const TextStyle(color: Colors.white, fontSize: 16))
-            else
-              Text('Reps: ${ex.count} / ${ex.targetReps}', style: const TextStyle(color: Colors.white, fontSize: 16)),
-            const SizedBox(height: 6),
-            Text(ex.feedback, style: TextStyle(color: ex.isCorrect ? Colors.greenAccent : Colors.orangeAccent, fontSize: 15)),
-            if (ex.completed)
-              const Padding(
-                padding: EdgeInsets.only(top: 6),
-                child: Text('COMPLETED!', style: TextStyle(color: Colors.yellowAccent, fontWeight: FontWeight.bold)),
+          ),
+          
+          // Stats panel di bawah dengan tema kuning
+          _buildStatsPanel(ex),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(Exercise exercise) {
+    return Container(
+      color: Colors.amber,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black),
+                onPressed: () => Navigator.of(context).pop(),
               ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Dropdown untuk memilih exercise
+                    DropdownButton<ExerciseType>(
+                      value: exercise.type,
+                      isExpanded: true,
+                      underline: const SizedBox.shrink(),
+                      items: _exerciseTypes
+                          .map((type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(
+                          Exercise.create(type).name,
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ))
+                          .toList(),
+                      onChanged: (ExerciseType? newType) {
+                        if (newType != null) _switchExercise(newType);
+                      },
+                    ),
+                    Text(
+                      '${exercise.count} / ${exercise.targetReps} Repetisi',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(_preferredLens == CameraLensDirection.back ? Icons.camera_front : Icons.camera_rear),
+                onPressed: _toggleLens,
+                tooltip: 'Switch camera',
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: _resetExercise,
+                tooltip: 'Reset',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.amber.shade700),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: exercise.targetReps > 0 ? (exercise.count / exercise.targetReps).clamp(0.0, 1.0) : 0.0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade700,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${exercise.count} / ${exercise.targetReps} Repetisi',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormOverlay(Exercise exercise) {
+    return Positioned(
+      top: 16,
+      right: 16,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.black.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Form indicator
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: exercise.isCorrect ? Colors.green : Colors.red,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                exercise.isCorrect ? Icons.check : Icons.close,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              exercise.isCorrect ? 'BENAR' : 'SALAH',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _chip(String label, String value, {Color color = Colors.white}) {
+
+  Widget _buildStatsPanel(Exercise exercise) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(color: Colors.white10, borderRadius: BorderRadius.circular(8)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text('$label: ', style: const TextStyle(color: Colors.white70)),
-        Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w600)),
-      ]),
+      color: Colors.amber,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header dengan stats
+          Row(
+            children: [
+              Expanded(
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: [
+                    _chip('FPS', _fps.toStringAsFixed(1), isDark: false),
+                    _chip('Inference', '${_frame?.inferenceMs ?? 0} ms', isDark: false),
+                    _chip('Pose', _frame?.isPoseDetected == true ? 'Detected' : 'Not detected', 
+                          color: _frame?.isPoseDetected == true ? Colors.green : Colors.red, isDark: false),
+                    _chip('Exercise', exercise.name, isDark: false),
+                  ],
+                ),
+              ),
+              // State indicator
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getStateColor(exercise),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  _getStateText(exercise),
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          
+          // Progress section
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (exercise.isTimed) ...[
+                      Text(
+                        'Time: ${exercise.elapsedSec.toStringAsFixed(1)} / ${exercise.targetTimeSec.toStringAsFixed(0)}s',
+                        style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      LinearProgressIndicator(
+                        value: exercise.progress,
+                        backgroundColor: Colors.white.withOpacity(0.3),
+                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+                      ),
+                    ] else ...[
+                      Text(
+                        'Reps: ${exercise.count} / ${exercise.targetReps}',
+                        style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      LinearProgressIndicator(
+                        value: exercise.progress,
+                        backgroundColor: Colors.white.withOpacity(0.3),
+                        valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Feedback AI section
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: exercise.isCorrect ? Colors.green : Colors.orange,
+                width: 2,
+              ),
+            ),
+            child: Column(
+              children: [
+                const Text(
+                  'Feedback AI',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  exercise.feedback,
+                  style: TextStyle(
+                    color: exercise.isCorrect ? Colors.green.shade800 : Colors.orange.shade800,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                if (exercise.aiFormStatus != null && exercise.aiFormStatus != "Unknown") ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        exercise.aiFormStatus == "Correct" ? Icons.check_circle : Icons.warning,
+                        color: exercise.aiFormStatus == "Correct" ? Colors.green : Colors.orange,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        exercise.aiFeedback ?? '',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: exercise.aiFormStatus == "Correct" ? Colors.green.shade800 : Colors.orange.shade800,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          
+          // Completion message
+          if (exercise.completed) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green, width: 2),
+              ),
+              child: const Text(
+                '🎉 EXERCISE COMPLETED! 🎉',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.green,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
+  }
+
+  Widget _chip(String label, String value, {Color color = Colors.black, bool isDark = true}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.3) : Colors.black.withOpacity(0.3),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label: ', 
+            style: TextStyle(
+              color: isDark ? Colors.white70 : Colors.black54, 
+              fontSize: 12,
+            ),
+          ),
+          Text(
+            value, 
+            style: TextStyle(
+              color: color, 
+              fontWeight: FontWeight.w600, 
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStateColor(Exercise exercise) {
+    if (exercise.completed) return Colors.green;
+    if (exercise.isCorrect) return Colors.blue;
+    return Colors.orange;
+  }
+
+  String _getStateText(Exercise exercise) {
+    if (exercise.completed) return 'DONE';
+    if (exercise.isCorrect) return 'GOOD';
+    return 'FIX';
   }
 }
