@@ -76,6 +76,7 @@ flutter:
   assets:
     - assets/img/
     - assets/build/
+    - assets/models/
     - assets/models/posture_model.tflite
     - assets/models/posture_labels.txt
 

@@ -2,26 +2,22 @@ import '../pose_mediapipe/pose_detection_result.dart';
 
 enum ExerciseType {
   jumpingJacks,
-  russianTwist,
-  legRaises,
-  mountainClimber,
   plank,
   cobraStretch,
 }
 
 enum ExerciseState {
+  // Common states
   waiting,
-  center,
-  up,
-  down,
-  leftDeep,
-  rightDeep,
-  leftForward,
-  rightForward,
   holding,
+
+  // Jumping Jacks states (from Python: waiting, ready, open)
+  jjReady, // Kaki rapat, tangan di samping
+  jjOpen, // Kaki terbuka, tangan di atas
+
+  // Cobra Stretch states
   readyToLift,
   stretching,
-  plank,
 }
 
 class Exercise {
@@ -30,18 +26,18 @@ class Exercise {
   final int targetReps;
   final bool isTimed;
   final double targetTimeSec;
-  
+
   int count = 0;
   ExerciseState state = ExerciseState.waiting;
   bool isCorrect = true;
   String feedback = '';
   bool completed = false;
-  
+
   DateTime? startTime;
   double elapsedSec = 0;
   bool isHolding = false;
-  
-  // AI feedback untuk plank
+
+  // AI feedback properties
   String aiFormStatus = 'Unknown';
   double aiConfidence = 0.0;
   String aiFeedback = '';
@@ -61,34 +57,11 @@ class Exercise {
           type: type,
           name: 'Jumping Jacks',
           targetReps: 10,
-          isTimed: false,
-        );
-      case ExerciseType.russianTwist:
-        return Exercise(
-          type: type,
-          name: 'Russian Twist',
-          targetReps: 10,
-          isTimed: false,
-        );
-      case ExerciseType.legRaises:
-        return Exercise(
-          type: type,
-          name: 'Leg Raises',
-          targetReps: 10,
-          isTimed: false,
-        );
-      case ExerciseType.mountainClimber:
-        return Exercise(
-          type: type,
-          name: 'Mountain Climber',
-          targetReps: 10,
-          isTimed: false,
         );
       case ExerciseType.plank:
         return Exercise(
           type: type,
           name: 'Plank',
-          targetReps: 0,
           isTimed: true,
           targetTimeSec: 30.0,
         );
@@ -96,7 +69,6 @@ class Exercise {
         return Exercise(
           type: type,
           name: 'Cobra Stretch',
-          targetReps: 0,
           isTimed: true,
           targetTimeSec: 30.0,
         );
