@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:math';
 
-import '../models/exercise_type.dart';
-import '../models/pose_detection_result.dart';
-import '../models/pose_landmark.dart';
-import '../models/pose_landmark_type.dart';
+import '../models/exercise/exercise_type.dart';
+import '../models/pose_mediapipe/pose_detection_result.dart';
+import '../models/pose_mediapipe/pose_landmark.dart';
+import '../models/pose_mediapipe/pose_landmark_type.dart';
 import 'pose_detection_service.dart';
 
 class RealtimeExerciseService {
@@ -56,7 +56,7 @@ class RealtimeExerciseService {
   /// Validasi keypoint dengan confidence threshold
   static bool _validateKeypoints(
     PoseDetectionResult pose, 
-    List<PoseLandmarkType> requiredPoints, 
+    List<PoseLandmarkType> requiredPoints,
     {double minConf = _minConfidence}
   ) {
     if (!pose.isPoseDetected) return false;

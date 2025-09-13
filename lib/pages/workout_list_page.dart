@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import '../data/dummy_data.dart';
-import '../models/workout_model.dart';
+import '../models/exercise/workout_model.dart';
 import 'workout_detail_page.dart';
 
 class WorkoutListPage extends StatelessWidget {

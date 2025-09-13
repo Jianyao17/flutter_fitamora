@@ -1,6 +1,6 @@
 // data/dummy_data.dart
 
-import '../../models/workout_model.dart';
+import '../models/exercise/workout_model.dart';
 
 // --- DATA DUMMY ---
 

@@ -1,17 +1,16 @@
-import 'package:flutter/gestures.dart'; // <-- Jangan lupa import ini
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import '../loginPage/login.dart';
 
-class RegistrasiLanjutan1 extends StatefulWidget {
-  const RegistrasiLanjutan1({super.key});
+class RegisterForm1 extends StatefulWidget {
+  const RegisterForm1({super.key});
 
   @override
-  State<RegistrasiLanjutan1> createState() => _RegistrasiLanjutan1State();
+  State<RegisterForm1> createState() => _RegisterForm1State();
 }
 
-class _RegistrasiLanjutan1State extends State<RegistrasiLanjutan1> {
+class _RegisterForm1State extends State<RegisterForm1> {
   // === 1. DEKLARASI STATE UNTUK MENGONTROL INPUT ===
   final _tanggalLahirController = TextEditingController();
   String? _selectedGender;

@@ -3,9 +3,9 @@ import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 
-import '../models/pose_detection_result.dart';
-import '../models/pose_landmark.dart';
-import '../models/pose_landmark_type.dart';
+import '../models/pose_mediapipe/pose_detection_result.dart';
+import '../models/pose_mediapipe/pose_landmark.dart';
+import '../models/pose_mediapipe/pose_landmark_type.dart';
 
 enum RunMode { IMAGE, VIDEO, LIVE_STREAM }
 

@@ -1,4 +1,4 @@
-import '../exercise.dart';
+import '../exercise/exercise.dart';
 
 class PostureItem {
   final String name;

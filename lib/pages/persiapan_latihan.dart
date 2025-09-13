@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../models/exercise.dart';
-import '../models/workout_plan.dart';
-import '../models/exercise_guide.dart';
+
+import '../models/exercise/exercise.dart';
+import '../models/exercise/exercise_guide.dart';
+import '../models/exercise/workout_plan.dart';
 
 class PersiapanLatihan extends StatefulWidget {
   final WorkoutPlan workoutPlan;

@@ -1,7 +1,7 @@
 // pages/workout_detail_page.dart - Ultra Simple Version
 
 import 'package:flutter/material.dart';
-import '../models/workout_model.dart';
+import '../models/exercise/workout_model.dart';
 
 class WorkoutDetailPage extends StatelessWidget {
   final Workout workout;

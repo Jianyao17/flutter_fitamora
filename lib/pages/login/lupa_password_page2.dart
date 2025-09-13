@@ -1,20 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:pinput/pinput.dart';
+import 'lupa_password_page3.dart';
 
-import 'lupaPassword2.dart';
-
-class LupaPassword extends StatefulWidget {
-  const LupaPassword({super.key});
+class LupaPassword2 extends StatefulWidget {
+  const LupaPassword2({super.key});
 
   @override
-  State<LupaPassword> createState() => _LupaPasswordState();
+  State<LupaPassword2> createState() => _LupaPassword2State();
 }
 
-class _LupaPasswordState extends State<LupaPassword> {
+class _LupaPassword2State extends State<LupaPassword2> {
+  final _pinController = TextEditingController();
   @override
   Widget build(BuildContext context) {
-    // Tentukan tinggi area putih di atas form
-    // const double whiteAreaHeight = 60 + 60 + 30; // SizedBox + Image + SizedBox
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -73,34 +71,68 @@ class _LupaPasswordState extends State<LupaPassword> {
                           const SizedBox(height: 15),
                           const Text(
                             textAlign: TextAlign.center,
-                            "Masukkan Email yang anda gunakan",
+                            "Masukkan 6 digit kode yang telah",
                             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
                           ),
                           const Text(
                             textAlign: TextAlign.center,
-                            "untuk membuat akun",
+                            "kami kirimkan kedalam email anda",
                             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
                           ),
                           const SizedBox(height: 30),
 
-                          // Username field
-                          TextField(
-                            decoration: InputDecoration(
-                              // MODIFIKASI: Tambahkan padding kanan pada ikon untuk memberi jarak ke teks input.
-                              prefixIcon: const Padding(
-                                padding: EdgeInsets.only(left: 20.0, right: 12.0),
-                                child: Icon(Icons.email_outlined, color: Color(0xFF6C757D)),
-                              ),
-                              hintText: "Email",
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(30),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
-                          ),
+
+                    Pinput(
+                    controller: _pinController,
+                    length: 6, // Jumlah digit kode
+                    // Ini adalah bagian kunci untuk membagi 3-3
+                    separatorBuilder: (index) => const SizedBox(width: 12.0), // Jarak antar kotak
+                    // Atau jika ingin pemisah berupa strip "-"
+                    // separatorBuilder: (index) {
+                    //   // Tampilkan strip hanya setelah digit ke-3
+                    //   return index == 2 ? const Text(' - ', style: TextStyle(fontSize: 24)) : const SizedBox(width: 8.0);
+                    // },
+
+                    // Fungsi yang akan dipanggil saat user selesai mengisi semua digit
+                    onCompleted: (pin) {
+                      print('Kode verifikasi yang dimasukkan: $pin');
+                      // Anda bisa tambahkan logika validasi di sini
+                    },
+
+                    // Kustomisasi tampilan setiap kotak PIN
+                    defaultPinTheme: PinTheme(
+                      width: 50,
+                      height: 55,
+                      textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(color: Colors.grey.shade400),
+                      ),
+                    ),
+                    // Tampilan kotak saat sedang diisi (aktif)
+                    focusedPinTheme: PinTheme(
+                      width: 50,
+                      height: 55,
+                      textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(color: Theme.of(context).primaryColor), // Warna border berbeda
+                      ),
+                    ),
+                    // Tampilan kotak setelah terisi
+                    submittedPinTheme: PinTheme(
+                      width: 50,
+                      height: 55,
+                      textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(color: Colors.green), // Warna border sukses
+                      ),
+                    ),
+                  ),
                           const SizedBox(height: 3),
                           // Lupa password
                           Align(
@@ -110,7 +142,7 @@ class _LupaPasswordState extends State<LupaPassword> {
                               style: TextButton.styleFrom(
                                 foregroundColor: Colors.black87,
                               ),
-                              child: const Text("Coba metode lain?", style: TextStyle(fontWeight: FontWeight.w400, decoration: TextDecoration.underline,),),
+                              child: const Text("Kirim Ulang?", style: TextStyle(fontWeight: FontWeight.w400, decoration: TextDecoration.underline,),),
                             ),
                           ),
 
@@ -121,7 +153,7 @@ class _LupaPasswordState extends State<LupaPassword> {
                             onPressed: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute<void>(
-                                  builder: (context) => const LupaPassword2(),
+                                  builder: (context) => const LupaPassword3(),
                                 ),
                               );
                             },

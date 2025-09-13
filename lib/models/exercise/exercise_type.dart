@@ -1,4 +1,4 @@
-import 'pose_detection_result.dart';
+import '../pose_mediapipe/pose_detection_result.dart';
 
 enum ExerciseType {
   jumpingJacks,

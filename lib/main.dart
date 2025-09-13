@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'models/exercise.dart';
-import 'models/exercise_guide.dart';
-import 'models/workout_plan.dart';
+import 'models/exercise/exercise.dart';
+import 'models/exercise/exercise_guide.dart';
+import 'models/exercise/workout_plan.dart';
 
-import 'pages/deteksi_postur.dart';
-import 'pages/halaman_latihan.dart';
-import 'pages/loginPage/login.dart';
-import 'pages/realtime_exercise_demo.dart';
-import 'pages/registerPage/formRegistrasiLanjutan1.dart';
-import 'pages/registerPage/register.dart';
+import 'pages/login/login_page.dart';
 import 'theme.dart';
 
 void main() {
@@ -26,7 +21,7 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       theme: appTheme,
       debugShowCheckedModeBanner: false,
-      home: RealtimeExerciseDemoPage(),
+      home: LoginPage(),
     );
   }
 }

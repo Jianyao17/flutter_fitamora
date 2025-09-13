@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 
-import '../loginPage/login.dart';
-import 'formRegistrasiLanjutan1.dart';
 
-class Register extends StatefulWidget {
-  const Register({super.key});
+import '../login/login_page.dart';
+import 'register_form1.dart';
+
+class RegisterPage extends StatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  State<Register> createState() => _RegisterState();
+  State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterState extends State<Register> {
+class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     // Tentukan tinggi area putih di atas form
@@ -168,7 +169,7 @@ class _RegisterState extends State<Register> {
                           ElevatedButton(
                             onPressed: () {   Navigator.of(context).push(
                               MaterialPageRoute<void>(
-                                builder: (context) => const RegistrasiLanjutan1(),
+                                builder: (context) => const RegisterForm1(),
                               ),
                             );
                               },
@@ -244,7 +245,7 @@ class _RegisterState extends State<Register> {
                             onPressed: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute<void>(
-                                  builder: (context) => const LoginPage(),
+                                  builder: (context) => LoginPage(),
                                 ),
                               );
                             },

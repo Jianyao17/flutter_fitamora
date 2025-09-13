@@ -1,4 +1,4 @@
-import '../models/exercise.dart';
+import '../models/exercise/exercise.dart';
 import '../models/posture/posture_item.dart';
 
 /// Database singleton untuk menyimpan postur yang dianalisis.

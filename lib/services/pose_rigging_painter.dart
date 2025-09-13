@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../models/pose_detection_result.dart';
-import '../models/pose_landmark_type.dart';
+import '../models/pose_mediapipe/pose_detection_result.dart';
+import '../models/pose_mediapipe/pose_landmark_type.dart';
 
 class PoseRiggingPainter extends CustomPainter {
   final PoseDetectionResult? poseResult;

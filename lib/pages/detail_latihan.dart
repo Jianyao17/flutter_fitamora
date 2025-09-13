@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../models/exercise.dart';
-import '../models/workout_plan.dart';
+import '../models/exercise/exercise.dart';
+import '../models/exercise/workout_plan.dart';
 import 'persiapan_latihan.dart';
 
 class DetailLatihan extends StatelessWidget

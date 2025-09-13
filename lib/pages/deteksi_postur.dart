@@ -3,9 +3,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../models/exercise.dart';
+import '../models/exercise/workout_plan.dart';
 import '../models/posture/posture_result.dart';
-import '../models/workout_plan.dart';
 import '../services/posture_analysis_service.dart';
 
 // Helper function untuk mengubah string Hex menjadi Color

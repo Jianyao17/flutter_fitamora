@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 
-import '../models/exercise_type.dart';
+import '../models/exercise/exercise_type.dart';
 import '../services/pose_detection_service.dart';
 import '../services/pose_rigging_painter.dart';
 import '../services/realtime_exercise_service.dart';

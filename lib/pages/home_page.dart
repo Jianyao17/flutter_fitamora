@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'deteksi_postur.dart';
+import 'realtime_exercise_demo.dart';
 import 'workout_list_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -55,7 +56,8 @@ class _HomePageState extends State<HomePage> {
                 context: context,
                 title: 'Program Latihan',
                 imagePath: 'assets/build/a2.png',
-                onTap: () {Navigator.of(context).push(
+                onTap: () {
+                  Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (context) => const WorkoutListPage(),
                   ),
@@ -64,9 +66,16 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
               _buildFeatureCard(
                 context: context,
-                title: 'Tantangan Harian',
+                title: 'Latihan Realtime',
                 imagePath: 'assets/build/a3.png',
-                onTap: () {},
+                onTap: ()
+                {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (c) => const RealtimeExerciseDemoPage(),
+                    ),
+                  );
+                },
               ),
             ],
           ),
