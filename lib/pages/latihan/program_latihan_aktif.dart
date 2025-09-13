@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../models/exercise/exercise.dart';
 import '../../models/exercise/workout_plan.dart';
 import '../../models/exercise/workout_program.dart';
+import '../persiapan_latihan.dart';
 
 class ProgramLatihanAktifPage extends StatelessWidget {
   final WorkoutProgram activeProgram;
@@ -18,6 +19,23 @@ class ProgramLatihanAktifPage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: ElevatedButton.icon(
+          icon: const Icon(Icons.play_arrow_rounded),
+          onPressed: ()
+          => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => PersiapanLatihan(workoutPlan: activeProgram.dailyPlans.first)),
+          ),
+          label: const Text('Mulai Latihan'),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
       body: ListView(
