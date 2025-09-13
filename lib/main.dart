@@ -5,6 +5,7 @@ import 'models/exercise_guide.dart';
 import 'models/workout_plan.dart';
 
 import 'pages/deteksi_postur.dart';
+import 'pages/halaman_latihan.dart';
 import 'pages/loginPage/login.dart';
 import 'pages/registerPage/formRegistrasiLanjutan1.dart';
 import 'pages/registerPage/register.dart';
@@ -24,7 +25,7 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       theme: appTheme,
       debugShowCheckedModeBanner: false,
-      home: DeteksiPosturPage(),
+      home: LoginPage(),
     );
   }
 }
@@ -41,9 +42,7 @@ final WorkoutPlan workoutPlan = WorkoutPlan(
       name: 'Squat',
       description:
           'Tekuk lutut hingga paha sejajar lantai, lalu kembali berdiri.',
-      reps: '12-15 kali x 3 set',
       icon: Icons.fitness_center,
-      totalSets: 3,
       guides: [
         ExerciseGuide(
           title: 'Form Benar',
@@ -59,9 +58,7 @@ final WorkoutPlan workoutPlan = WorkoutPlan(
     Exercise(
       name: 'Jump Squat',
       description: 'Lakukan squat lalu meloncat eksplosif ke atas.',
-      reps: '10-12 kali x 3 set',
       icon: Icons.keyboard_double_arrow_up,
-      totalSets: 3,
       guides: [
         ExerciseGuide(
           title: 'Gerakan Eksplosif',
@@ -74,9 +71,7 @@ final WorkoutPlan workoutPlan = WorkoutPlan(
       name: 'Glute Bridge',
       description:
           'Berbaring, tekuk lutut, lalu dorong pinggul ke atas hingga tubuh lurus.',
-      reps: '12-15 kali x 3 set',
       icon: Icons.straighten,
-      totalSets: 3,
       guides: [
         ExerciseGuide(
           title: 'Form Benar',
@@ -93,9 +88,7 @@ final WorkoutPlan workoutPlan = WorkoutPlan(
       name: 'Lunges',
       description:
           'Langkahkan satu kaki ke depan dan tekuk kedua lutut hingga 90 derajat.',
-      reps: '10-12 kali per kaki x 3 set',
       icon: Icons.directions_walk,
-      totalSets: 3,
       guides: [
         ExerciseGuide(
           title: 'Form Benar',

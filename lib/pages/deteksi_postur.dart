@@ -1,11 +1,17 @@
-// file: pages/detection_page.dart
-
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../models/posture_model.dart';
-import '../services/pose_image_service.dart';
+
+import '../models/exercise.dart';
+import '../models/posture/posture_result.dart';
+import '../models/workout_plan.dart';
+import '../services/posture_analysis_service.dart';
+
+// Helper function untuk mengubah string Hex menjadi Color
+Color _hexToColor(String code) {
+  return Color(int.parse(code.substring(1, 7), radix: 16) + 0xFF000000);
+}
 
 class DeteksiPosturPage extends StatefulWidget {
   const DeteksiPosturPage({Key? key}) : super(key: key);
@@ -16,11 +22,10 @@ class DeteksiPosturPage extends StatefulWidget {
 
 class _DeteksiPosturPageState extends State<DeteksiPosturPage> {
   final ImagePicker _picker = ImagePicker();
-
-  // State HANYA untuk foto samping
-  XFile? _sideImage;
+  final PostureAnalysisService _analysisService = PostureAnalysisService();
 
   // State untuk manajemen UI
+  XFile? _sideImage;
   bool _isLoading = false;
   PostureResult? _result;
   String? _errorMessage;
@@ -45,29 +50,22 @@ class _DeteksiPosturPageState extends State<DeteksiPosturPage> {
 
   /// Fungsi untuk memulai proses deteksi
   Future<void> _startDetection() async {
-    // Memastikan foto samping sudah dipilih
-    if (_sideImage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Silakan pilih foto samping terlebih dahulu.')),
-      );
-      return;
-    }
+    if (_sideImage == null) return;
 
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _result = null;
+      _result = null; // Hapus hasil lama sebelum memulai
     });
 
     try {
-      // Panggil service dengan file foto samping
-      final result = await PoseImageService.detectPosture(File(_sideImage!.path));
+      final result = await _analysisService.analyzePosture(File(_sideImage!.path));
       setState(() {
         _result = result;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = "Error: ${e.toString()}";
       });
     } finally {
       setState(() {
@@ -80,8 +78,8 @@ class _DeteksiPosturPageState extends State<DeteksiPosturPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Theme.of(context).primaryColor,
         title: const Text('Deteksi Postur Tubuh'),
-        centerTitle: true,
         elevation: 1,
       ),
       body: SingleChildScrollView(
@@ -89,11 +87,10 @@ class _DeteksiPosturPageState extends State<DeteksiPosturPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Kontainer untuk pemilihan gambar (hanya satu)
+            const SizedBox(height: 16),
             _buildImageCard('Foto Samping', _sideImage),
-            const SizedBox(height: 24),
 
-            // Menampilkan pesan error jika ada
+            const SizedBox(height: 24),
             if (_errorMessage != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 16.0),
@@ -103,43 +100,202 @@ class _DeteksiPosturPageState extends State<DeteksiPosturPage> {
                   textAlign: TextAlign.center,
                 ),
               ),
-
-            // Menampilkan hasil deteksi jika sudah ada
+            if (_isLoading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: Column(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text("Menganalisis postur...", style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                ),
+              ),
             if (_result != null)
-              _buildResultCard(_result!),
+              _buildResultsSection(_result!), // Menampilkan semua hasil
           ],
         ),
       ),
-      // Tombol deteksi di bagian bawah
-      bottomNavigationBar: Padding(
+      bottomNavigationBar: _buildBottomButton(),
+    );
+  }
+
+  /// Widget untuk membangun tombol bawah yang dinamis
+  Widget _buildBottomButton()
+  {
+    if (_result != null) {
+      return Padding(
         padding: const EdgeInsets.all(16.0),
         child: ElevatedButton.icon(
-          onPressed: _isLoading ? null : _startDetection,
-          icon: _isLoading
-              ? Container(
-            width: 24,
-            height: 24,
-            padding: const EdgeInsets.all(2.0),
-            child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-          )
-              : const Icon(CupertinoIcons.sparkles),
-          label: Text(_isLoading ? 'Mendeteksi...' : 'Mulai Deteksi'),
+          onPressed: ()
+          {
+            // Atur plan latihan berdasarkan hasil deteksi
+            final exercises = _result!.analysis.exerciseProgram;
+            WorkoutPlan workoutPlan = WorkoutPlan(
+              title: "Latihan ${PostureAnalysisService.formatClassName(_result!.prediction.className)}",
+              description: "Program latihan yang disesuaikan untuk memperbaiki postur ${PostureAnalysisService.formatClassName(_result!.prediction.className)}.",
+              exercises: exercises,
+            );
+
+            // TODO: Simpan workoutPlan ke database atau state management
+            print(workoutPlan);
+          },
+          icon: const Icon(Icons.fitness_center),
+          label: const Text('Atur Latihan'),
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
             textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: ElevatedButton.icon(
+        onPressed: _isLoading || _sideImage == null ? null : _startDetection,
+        icon: _isLoading
+            ? Container(
+          width: 24,
+          height: 24,
+          padding: const EdgeInsets.all(2.0),
+          child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+        )
+            : const Icon(CupertinoIcons.sparkles),
+        label: Text(_isLoading ? 'Mendeteksi...' : 'Mulai Deteksi'),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       ),
     );
   }
 
-  /// Widget untuk kartu pemilihan gambar (disederhanakan)
+  /// Widget untuk membangun seluruh bagian hasil analisis (KARTU + DETAIL)
+  Widget _buildResultsSection(PostureResult result) 
+  {
+    final prediction = result.prediction;
+    final analysis = result.analysis;
+    final programLatihan = analysis.exerciseProgram;
+    final resultColor = _hexToColor(analysis.colorHex);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. KARTU STATUS (RINGKASAN)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: resultColor.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: resultColor, width: 1.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Status Postur: ${prediction.status}",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: resultColor),
+              ),
+              const SizedBox(height: 8),
+              Text.rich(
+                TextSpan(
+                  style: const TextStyle(fontSize: 16, color: Colors.black87, height: 1.5),
+                  children: [
+                    const TextSpan(text: "Terdeteksi sebagai "),
+                    TextSpan(
+                      text: PostureAnalysisService.formatClassName(_result!.prediction.className),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    TextSpan(
+                      text: " dengan akurasi ${prediction.confidence.toStringAsFixed(1)}%.",
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // 2. MASALAH TERDETEKSI (JIKA ADA)
+        if (analysis.problems.isNotEmpty) ...[
+          _buildSectionTitle('Masalah Terdeteksi'),
+          const SizedBox(height: 8),
+          ...analysis.problems.map((problem) => _buildInfoListItem(problem, Icons.warning_amber_rounded, Colors.orange)),
+          const SizedBox(height: 24),
+        ],
+
+        // 3. SARAN PERBAIKAN
+        if (analysis.suggestions.isNotEmpty) ...[
+          _buildSectionTitle('Saran Perbaikan'),
+          const SizedBox(height: 8),
+          ...analysis.suggestions.map((suggestion) => _buildInfoListItem(suggestion, Icons.lightbulb_outline, Colors.blue)),
+          const SizedBox(height: 24),
+        ],
+
+        // 4. REKOMENDASI LATIHAN (SPESIFIK)
+        _buildSectionTitle('Rekomendasi Latihan'),
+        const SizedBox(height: 16),
+        ListView.builder(
+          itemCount: programLatihan.length,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemBuilder: (context, index) {
+            final exercise = programLatihan[index];
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12.0),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                  child: Icon(exercise.icon, color: Theme.of(context).primaryColor),
+                ),
+                title: Text(exercise.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(exercise.detailsString),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {},
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  /// Helper untuk membuat judul setiap bagian
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    );
+  }
+
+  /// Helper untuk membuat item list untuk masalah dan saran
+  Widget _buildInfoListItem(String text, IconData icon, Color iconColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: iconColor),
+          const SizedBox(width: 12),
+          Expanded(child: Text(text, style: const TextStyle(fontSize: 15, height: 1.4))),
+        ],
+      ),
+    );
+  }
+
+  /// Widget untuk kartu pemilihan gambar (tidak berubah)
   Widget _buildImageCard(String title, XFile? imageFile) {
     return Column(
       children: [
         Text(title, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         AspectRatio(
           aspectRatio: 3 / 4,
           child: Card(
@@ -147,23 +303,18 @@ class _DeteksiPosturPageState extends State<DeteksiPosturPage> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             clipBehavior: Clip.antiAlias,
             child: InkWell(
-              onTap: _showImageSourceDialog, // Panggil dialog
+              onTap: _showImageSourceDialog,
               child: imageFile != null
-                  ? Image.file(
-                File(imageFile.path),
-                fit: BoxFit.cover,
-                width: double.infinity,
-              )
+                  ? Image.file(File(imageFile.path), fit: BoxFit.cover, width: double.infinity)
                   : Container(
                 color: Colors.grey.shade100,
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.add_a_photo_outlined,
-                          size: 50, color: Colors.grey.shade600),
+                      Icon(Icons.add_a_photo_outlined, size: 50, color: Colors.grey.shade600),
                       const SizedBox(height: 8),
-                      const Text('Ketuk untuk memilih gambar', style: TextStyle(color: Colors.grey),)
+                      const Text('Ketuk untuk memilih gambar', style: TextStyle(color: Colors.grey)),
                     ],
                   ),
                 ),
@@ -175,7 +326,7 @@ class _DeteksiPosturPageState extends State<DeteksiPosturPage> {
     );
   }
 
-  /// Menampilkan dialog untuk memilih sumber gambar (Kamera/Galeri)
+  /// Menampilkan dialog untuk memilih sumber gambar (tidak berubah)
   void _showImageSourceDialog() {
     showModalBottomSheet(
       context: context,
@@ -200,66 +351,6 @@ class _DeteksiPosturPageState extends State<DeteksiPosturPage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  /// Widget untuk menampilkan kartu hasil deteksi (Sama seperti sebelumnya)
-  Widget _buildResultCard(PostureResult result) {
-    final color = Color(int.parse(result.analysis.colorHex.replaceFirst('#', '0xFF')));
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hasil Analisis',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const Divider(height: 24),
-            ListTile(
-              leading: Icon(Icons.check_circle_outline, color: color),
-              title: Text(result.prediction.status, style: TextStyle(fontWeight: FontWeight.bold, color: color, fontSize: 18)),
-              subtitle: Text(
-                '${result.prediction.className.replaceAll('_', ' ')} (Akurasi: ${result.prediction.confidence.toStringAsFixed(1)}%)',
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            if(result.analysis.problems.isNotEmpty) ...[
-              _buildSectionTitle('Masalah Terdeteksi'),
-              ...result.analysis.problems.map((problem) => _buildListItem(problem, Icons.warning_amber_rounded)),
-              const SizedBox(height: 16),
-            ],
-
-            _buildSectionTitle('Saran Perbaikan'),
-            ...result.analysis.suggestions.map((suggestion) => _buildListItem(suggestion, Icons.lightbulb_outline)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-    );
-  }
-
-  Widget _buildListItem(String text, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: Colors.grey.shade700),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text)),
-        ],
       ),
     );
   }

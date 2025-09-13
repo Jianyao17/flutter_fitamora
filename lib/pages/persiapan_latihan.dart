@@ -225,7 +225,7 @@ class _PersiapanLatihanState extends State<PersiapanLatihan>
                     fontSize: 22, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
 
-                Text(currentExercise.reps,
+                Text(currentExercise.detailsString,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Colors.grey[700], fontSize: 16)),
                 const SizedBox(height: 12),

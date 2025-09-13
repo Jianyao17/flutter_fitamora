@@ -181,7 +181,7 @@ class DetailLatihan extends StatelessWidget
                     border: Border.all(color: Colors.grey[300]!),
                   ),
                   child: Text(
-                    'Repetisi: ${exercise.reps}',
+                    exercise.detailsString,
                     style: theme.textTheme.labelSmall,
                   ),
                 ),
