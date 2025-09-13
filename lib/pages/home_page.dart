@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'deteksi_postur.dart';
+import 'latihan/list_latihan_page.dart';
 import 'realtime_exercise_demo.dart';
-import 'workout_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -59,7 +59,7 @@ class _HomePageState extends State<HomePage> {
                 onTap: () {
                   Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (context) => const WorkoutListPage(),
+                    builder: (context) => const ListLatihanPage(),
                   ),
                 );},
               ),
