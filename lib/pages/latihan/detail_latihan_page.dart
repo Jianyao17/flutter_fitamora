@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../data/workout_database.dart';
 import '../../models/exercise/exercise.dart';
 import '../../models/exercise/workout_plan.dart';
 import '../persiapan_latihan.dart';
@@ -27,12 +28,6 @@ class DetailLatihan extends StatelessWidget
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.home_outlined),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -47,12 +42,60 @@ class DetailLatihan extends StatelessWidget
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20.0),
-        child: ElevatedButton(
-          onPressed: () => Navigator.of(context)
-            .push(MaterialPageRoute(builder:
-              (_) => PersiapanLatihan(workoutPlan: workoutPlan)),
-          ),
-          child: const Text('Mulai Latihan'),
+        // Menggunakan Row untuk menampung dua tombol
+        child: Row(
+          children: [
+            // 1. Tombol "Mulai Latihan" (mengambil sisa ruang)
+            Expanded(
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.play_arrow_rounded),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          PersiapanLatihan(workoutPlan: workoutPlan)),
+                ),
+                label: const Text('Mulai Latihan'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12), // Jarak antar tombol
+
+            // 2. Tombol "Tambahkan ke Program" (FAB baru)
+            FloatingActionButton(
+              onPressed: () {
+                // Cek apakah ada program yang sedang aktif
+                if (WorkoutDatabase.instance.activeWorkoutProgram.totalDays > 0)
+                {
+                  // Panggil fungsi untuk menambahkan workout plan
+                  WorkoutDatabase.instance.addWorkoutPlan(workoutPlan);
+
+                  // Tampilkan notifikasi sukses
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("'${workoutPlan.title}' telah ditambahkan ke program Anda."),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  );
+                } else {
+                  // Tampilkan notifikasi error jika tidak ada program aktif
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text("Tidak ada program aktif. Silakan buat program baru terlebih dahulu."),
+                      backgroundColor: theme.colorScheme.error,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  );
+                }
+              },
+              tooltip: 'Tambahkan ke Program Aktif',
+              child: const Icon(Icons.add),
+            ),
+          ],
         ),
       ),
     );

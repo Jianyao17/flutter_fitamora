@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'deteksi_postur.dart';
+import '../data/workout_database.dart';
+import '../models/exercise/workout_program.dart';
+import 'deteksi_postur_page.dart';
 import 'latihan/list_latihan_page.dart';
+import 'latihan/program_latihan_aktif.dart';
 import 'realtime_exercise_demo.dart';
 
 class HomePage extends StatefulWidget {
@@ -20,8 +23,24 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  Future<void> _navigateAndWaitChanges(BuildContext context, Widget page) async
+  {
+    // LANGKAH 1: "Tunggu" sampai pengguna kembali dari halaman berikutnya
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (c) => page,
+      ),
+    );
+
+    // LANGKAH 2: Setelah kembali, panggil setState untuk membangun ulang HomePage
+    // Ini akan mengambil data terbaru dari WorkoutDatabase
+    setState(() {});
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context)
+  {
+    WorkoutProgram activeProgram = WorkoutDatabase.instance.activeWorkoutProgram;
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -30,52 +49,32 @@ class _HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 16),
-              // SARAN 1: Placeholder diubah menjadi kartu program aktif yang informatif
               _buildActiveProgramCard(
-                title: 'Program Perbaikan Skoliosis',
-                progress: 1 / 7, // Hari 1 dari 7
-                day: 1,
-                totalDays: 7,
+                title: activeProgram.title,
+                progress: activeProgram.progressPercent,
+                day: activeProgram.currentDay,
+                totalDays: activeProgram.totalDays,
               ),
               const SizedBox(height: 24),
               _buildFeatureCard(
                 context: context,
                 title: 'Deteksi Postur Tubuh',
                 imagePath: 'assets/build/a1.png',
-                onTap: ()
-                {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (c) => const DeteksiPosturPage(),
-                    ),
-                  );
-                },
+                onTap: () => _navigateAndWaitChanges(context, const DeteksiPosturPage()),
               ),
               const SizedBox(height: 16),
               _buildFeatureCard(
                 context: context,
                 title: 'Program Latihan',
                 imagePath: 'assets/build/a2.png',
-                onTap: () {
-                  Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (context) => const ListLatihanPage(),
-                  ),
-                );},
+                onTap: () => _navigateAndWaitChanges(context, const ListLatihanPage()),
               ),
               const SizedBox(height: 16),
               _buildFeatureCard(
                 context: context,
                 title: 'Latihan Realtime',
                 imagePath: 'assets/build/a3.png',
-                onTap: ()
-                {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (c) => const RealtimeExerciseDemoPage(),
-                    ),
-                  );
-                },
+                onTap: () => _navigateAndWaitChanges(context, const RealtimeExerciseDemoPage()),
               ),
             ],
           ),
@@ -118,60 +117,71 @@ class _HomePageState extends State<HomePage> {
     required int day,
     required int totalDays,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'PROGRAM LATIHAN AKTIF',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
+    return GestureDetector(
+      onTap: ()
+      {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (c) => ProgramLatihanAktifPage(
+                activeProgram: WorkoutDatabase.instance.activeWorkoutProgram),
           ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Hari $day dari $totalDays',
-                style: const TextStyle(color: Colors.black54),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'PROGRAM LATIHAN AKTIF',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
               ),
-              Text(
-                '${(progress * 100).toInt()}%',
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontWeight: FontWeight.bold,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Hari $day dari $totalDays',
+                  style: const TextStyle(color: Colors.black54),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.grey[300],
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF2C94C)),
-              minHeight: 8,
+                Text(
+                  '${(progress * 100).toInt()}%',
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: Colors.grey[300],
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF2C94C)),
+                minHeight: 8,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -3,9 +3,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../data/workout_database.dart';
 import '../models/exercise/workout_plan.dart';
 import '../models/posture/posture_result.dart';
 import '../services/posture_analysis_service.dart';
+import 'latihan/program_latihan_aktif.dart';
 
 // Helper function untuk mengubah string Hex menjadi Color
 Color _hexToColor(String code) {
@@ -130,16 +132,34 @@ class _DeteksiPosturPageState extends State<DeteksiPosturPage> {
         child: ElevatedButton.icon(
           onPressed: ()
           {
-            // Atur plan latihan berdasarkan hasil deteksi
-            final exercises = _result!.analysis.exerciseProgram;
-            WorkoutPlan workoutPlan = WorkoutPlan(
-              title: "Latihan ${PostureAnalysisService.formatClassName(_result!.prediction.className)}",
-              description: "Program latihan yang disesuaikan untuk memperbaiki postur ${PostureAnalysisService.formatClassName(_result!.prediction.className)}.",
-              exercises: exercises,
-            );
+            setState(()
+            {
+              // Atur plan latihan berdasarkan hasil deteksi
+              final exercises = _result!.analysis.exerciseProgram;
+              WorkoutPlan workoutPlan = WorkoutPlan(
+                title: "Latihan ${PostureAnalysisService.formatClassName(_result!.prediction.className)}",
+                description: "Program latihan yang disesuaikan untuk memperbaiki postur ${PostureAnalysisService.formatClassName(_result!.prediction.className)}.",
+                exercises: exercises,
+              );
+              WorkoutDatabase.instance.addWorkoutPlan(workoutPlan);
 
-            // TODO: Simpan workoutPlan ke database atau state management
-            print(workoutPlan);
+              // Notifikasi user
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Program latihan "${workoutPlan.title}" telah ditambahkan!'),
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+
+              // Ke Halaman program latihan
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (c) => ProgramLatihanAktifPage(
+                      activeProgram: WorkoutDatabase.instance.activeWorkoutProgram),
+                ),
+              );
+            });
           },
           icon: const Icon(Icons.fitness_center),
           label: const Text('Atur Latihan'),
