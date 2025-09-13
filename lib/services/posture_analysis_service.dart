@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
 
-import '../models/exercise.dart';
+import '../data/posture_database.dart';
 import '../models/posture/posture_analysis.dart';
 import '../models/posture/posture_prediction.dart';
 import '../models/posture/posture_result.dart';
@@ -44,8 +44,7 @@ class PostureAnalysisService {
 
       // Memuat label
       final labelsData = await rootBundle.loadString(_labelsPath);
-      _labels = labelsData
-          .split('\n')
+      _labels = labelsData.split('\n')
           .map((label) => label.trim())
           .where((label) => label.isNotEmpty)
           .toList();
@@ -152,8 +151,9 @@ class PostureAnalysisService {
     print("   - Class: $predictedClass");
     print("   - Confidence: ${confidence.toStringAsFixed(2)}%");
 
-    // 4. Dapatkan analisis detail (logika dari backend Python)
-    final analysis = _getPostureAnalysis(predictedClass);
+    // 4. Dapatkan analisis detail berdasarkan kelas prediksi
+    final analysis = PostureDatabase.getPostureItemAnalysis(predictedClass);
+    print(analysis.name);
 
     // 5. Buat mapping probabilitas kelas
     final Map<String, double> classProbabilities = {};
@@ -178,80 +178,9 @@ class PostureAnalysisService {
     );
   }
 
-  /// Menyediakan analisis dan saran berdasarkan kelas prediksi.
-  /// Logika ini dipindahkan langsung dari backend Python.
-  ({String status,
-    List<String> problems,
-    List<String> suggestions,
-    List<Exercise> exerciseProgram,
-    String colorHex}) _getPostureAnalysis(String predictedClass)
-  {
-    const defaultDesc = "Latihan untuk membantu memperbaiki postur tubuh Anda.";
-    switch (predictedClass)
-    {
-      case 'forward_head_kyphosis':
-        return (
-        status: 'Perlu Perbaikan',
-        problems: [
-          'Kepala terlalu maju (Forward Head Posture)',
-          'Punggung atas membulat (Kyphosis)',
-          'Dapat menyebabkan nyeri leher dan punggung'
-        ],
-        suggestions: [
-          'Lakukan chin tucks exercise 10-15 kali, 3 set per hari',
-          'Perbaiki posisi layar komputer sejajar mata',
-          'Strengthening otot leher bagian belakang',
-          'Wall angel exercise untuk membuka dada',
-          'Konsultasi dengan fisioterapis jika nyeri berlanjut'
-        ],
-        exerciseProgram: [ // Gunakan constructor Exercise yang baru
-          Exercise(name: 'Chin tucks', sets: 2, rep: 10, rest: 15, description: defaultDesc),
-          Exercise(name: 'Neck retraction', sets: 2, rep: 8, rest: 15, description: defaultDesc),
-          Exercise(name: 'Shoulder rolls', sets: 2, rep: 12, rest: 10, description: defaultDesc),
-          Exercise(name: 'Deep breathing', sets: 1, duration: 60, description: "Latihan relaksasi dan pernapasan."),
-        ],
-        colorHex: '#FF9800' // Orange
-        );
-      case 'anterior_pelvic_tilt':
-        return (
-        status: 'Perlu Perbaikan',
-        problems: [
-          'Panggul miring ke depan (Anterior Pelvic Tilt)',
-          'Lordosis lumbal berlebihan',
-          'Dapat menyebabkan nyeri punggung bawah'
-        ],
-        suggestions: [
-          'Strengthening otot glutes dan hamstring',
-          'Stretching otot hip flexor dan erector spinae',
-          'Dead bug exercise untuk core stability',
-          'Posterior pelvic tilt exercise',
-          'Hindari duduk terlalu lama tanpa istirahat'
-        ],
-        exerciseProgram: [ // Gunakan constructor Exercise yang baru
-          Exercise(name: 'Pelvic tilts', sets: 2, rep: 10, rest: 15, description: defaultDesc),
-          Exercise(name: 'Knee hugs', sets: 1, duration: 30, rest: 10, description: defaultDesc),
-          Exercise(name: 'Cat-cow Stretch', sets: 1, duration: 60, rest: 15, description: defaultDesc),
-          Exercise(name: 'Deep breathing', sets: 1, duration: 60, description: "Latihan relaksasi dan pernapasan."),
-        ],
-        colorHex: '#F44336' // Red
-        );
-      case 'normal':
-      default:
-        return (
-        status: 'Baik',
-        problems: [],
-        suggestions: [
-          'Postur tubuh Anda sudah baik!',
-          'Pertahankan posisi duduk dan berdiri yang benar',
-          'Lakukan stretching ringan secara rutin'
-        ],
-        exerciseProgram: [ // Gunakan constructor Exercise yang baru
-          Exercise(name: 'Full body stretch', sets: 1, duration: 120, description: "Latihan peregangan untuk menjaga fleksibilitas."),
-          Exercise(name: 'Shoulder circles', sets: 2, rep: 12, rest: 10, description: "Meningkatkan mobilitas sendi bahu."),
-          Exercise(name: 'Deep breathing', sets: 1, duration: 120, description: "Latihan relaksasi dan pernapasan."),
-        ],
-        colorHex: '#4CAF50' // Green
-        );
-    }
-  }
+  // Helper function untuk memformat nama kelas
+  static String formatClassName(String className)
+  => className.split('_')
+      .map((word) => word[0].toUpperCase() + word.substring(1))
+      .join(' ');
 }

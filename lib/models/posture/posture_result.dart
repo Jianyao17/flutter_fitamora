@@ -2,13 +2,13 @@ import 'posture_analysis.dart';
 import 'posture_prediction.dart';
 
 class PostureResult {
-  final PosturePrediction prediction;
   final PostureAnalysis analysis;
+  final PosturePrediction prediction;
   final Map<String, double> classProbabilities;
 
   PostureResult({
-    required this.prediction,
     required this.analysis,
+    required this.prediction,
     required this.classProbabilities,
   });
 
