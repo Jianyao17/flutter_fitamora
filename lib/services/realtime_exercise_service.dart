@@ -168,9 +168,10 @@ class RealtimeExerciseService {
   static Exercise _processPlank(PoseDetectionResult pose, Exercise exercise) {
     final req = [
       PoseLandmarkType.leftShoulder, PoseLandmarkType.rightShoulder, PoseLandmarkType.leftHip,
-      PoseLandmarkType.rightHip, PoseLandmarkType.leftWrist, PoseLandmarkType.rightWrist
+      PoseLandmarkType.rightHip, PoseLandmarkType.leftWrist, PoseLandmarkType.rightWrist,
+      PoseLandmarkType.leftElbow, PoseLandmarkType.rightElbow
     ];
-    if (!_validateKeypoints(pose, req, minConf: 0.25)) {
+    if (!_validateKeypoints(pose, req, minConf: 0.4)) {
       exercise.feedback = "Posisi lebih jelas - pastikan tangan dan tubuh terlihat";
       exercise.isCorrect = false;
       exercise.aiFormStatus = "Unknown";
@@ -182,7 +183,31 @@ class RealtimeExerciseService {
     final lm = pose.landmarks;
     final avgShoulderY = (lm[PoseLandmarkType.leftShoulder]!.y + lm[PoseLandmarkType.rightShoulder]!.y) / 2;
     final avgHipY = (lm[PoseLandmarkType.leftHip]!.y + lm[PoseLandmarkType.rightHip]!.y) / 2;
-    final isPlankPosition = (avgShoulderY - avgHipY).abs() < 0.12;
+    final avgWristY = (lm[PoseLandmarkType.leftWrist]!.y + lm[PoseLandmarkType.rightWrist]!.y) / 2;
+
+    // Validasi posisi plank yang lebih ketat
+    final shoulderHipAlignment = (avgShoulderY - avgHipY).abs() < 0.05; // Toleransi lebih kecil
+    final handsBelowShoulders = avgWristY > avgShoulderY; // Tangan harus di bawah bahu
+    final bodyHorizontal = avgHipY > avgShoulderY; // Pinggul harus di bawah bahu (posisi horizontal)
+
+    // Validasi sudut lengan (harus lurus untuk plank)
+    final leftArmAngle = _calculateAngle(lm[PoseLandmarkType.leftShoulder], lm[PoseLandmarkType.leftElbow], lm[PoseLandmarkType.leftWrist]);
+    final rightArmAngle = _calculateAngle(lm[PoseLandmarkType.rightShoulder], lm[PoseLandmarkType.rightElbow], lm[PoseLandmarkType.rightWrist]);
+    final armsStraight = leftArmAngle > 150 && rightArmAngle > 150; // Lengan harus hampir lurus
+
+    // Validasi tambahan: pastikan tidak dalam posisi berdiri
+    final leftKneeY = lm[PoseLandmarkType.leftKnee]?.y ?? 0.0;
+    final rightKneeY = lm[PoseLandmarkType.rightKnee]?.y ?? 0.0;
+    final avgKneeY = (leftKneeY + rightKneeY) / 2;
+    final notStanding = avgKneeY > avgHipY; // Lutut harus di bawah pinggul (tidak berdiri)
+
+    // Validasi jarak tangan-bahu yang wajar untuk plank
+    final leftHandShoulderDistance = (lm[PoseLandmarkType.leftWrist]!.x - lm[PoseLandmarkType.leftShoulder]!.x).abs();
+    final rightHandShoulderDistance = (lm[PoseLandmarkType.rightWrist]!.x - lm[PoseLandmarkType.rightShoulder]!.x).abs();
+    final handsAtShoulderWidth = leftHandShoulderDistance < 0.3 && rightHandShoulderDistance < 0.3;
+
+    final isPlankPosition = shoulderHipAlignment && handsBelowShoulders && bodyHorizontal &&
+        armsStraight && notStanding && handsAtShoulderWidth;
 
     void updateAIFeedback() {
       final prediction = AIModelService.I.predictPlankForm(pose);
@@ -201,7 +226,22 @@ class RealtimeExerciseService {
           exercise.isCorrect = true;
           updateAIFeedback();
         } else {
-          exercise.feedback = "Posisi plank: tangan selebar bahu, tubuh lurus";
+          // Berikan feedback yang lebih spesifik berdasarkan kondisi yang tidak terpenuhi
+          if (!notStanding) {
+            exercise.feedback = "Posisi berdiri terdeteksi - masuk ke posisi plank";
+          } else if (!shoulderHipAlignment) {
+            exercise.feedback = "Badan harus lurus - bahu dan pinggul sejajar";
+          } else if (!handsBelowShoulders) {
+            exercise.feedback = "Tangan harus di bawah bahu - posisi push-up";
+          } else if (!bodyHorizontal) {
+            exercise.feedback = "Badan harus horizontal - pinggul di bawah bahu";
+          } else if (!armsStraight) {
+            exercise.feedback = "Lengan harus lurus - seperti posisi push-up";
+          } else if (!handsAtShoulderWidth) {
+            exercise.feedback = "Tangan selebar bahu - posisi plank yang benar";
+          } else {
+            exercise.feedback = "Posisi plank: tangan selebar bahu, tubuh lurus";
+          }
           exercise.isCorrect = false;
         }
         break;
@@ -227,7 +267,22 @@ class RealtimeExerciseService {
           }
           exercise.isCorrect = true;
         } else {
-          exercise.feedback = "Pertahankan posisi plank!";
+          // Berikan feedback spesifik saat form rusak
+          if (!notStanding) {
+            exercise.feedback = "Form rusak! Posisi berdiri terdeteksi - kembali ke plank";
+          } else if (!shoulderHipAlignment) {
+            exercise.feedback = "Form rusak! Badan harus lurus - bahu dan pinggul sejajar";
+          } else if (!handsBelowShoulders) {
+            exercise.feedback = "Form rusak! Tangan harus di bawah bahu";
+          } else if (!bodyHorizontal) {
+            exercise.feedback = "Form rusak! Badan harus horizontal";
+          } else if (!armsStraight) {
+            exercise.feedback = "Form rusak! Lengan harus lurus";
+          } else if (!handsAtShoulderWidth) {
+            exercise.feedback = "Form rusak! Tangan selebar bahu";
+          } else {
+            exercise.feedback = "Pertahankan posisi plank!";
+          }
           exercise.isCorrect = false;
           exercise.isHolding = false;
           exercise.aiFormStatus = "Unknown";

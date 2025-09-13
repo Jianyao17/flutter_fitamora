@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:image/image.dart' as img;
 
 import '../models/pose_mediapipe/pose_detection_result.dart';
@@ -9,39 +10,166 @@ import '../models/pose_mediapipe/pose_landmark_type.dart';
 
 enum RunMode { IMAGE, VIDEO, LIVE_STREAM }
 
-/// Service untuk komunikasi Flutter ↔ Native (Kotlin)
 class PoseDetectionService
 {
   static const MethodChannel _methodChannel = MethodChannel("com.example.fitamora/method");
-  static const EventChannel _eventChannel = EventChannel("com.example.fitamora/event");
+  static const EventChannel _poseEventChannel = EventChannel("com.example.fitamora/event");
 
-  static StreamSubscription? _subscription;
-  static final StreamController<PoseDetectionResult> _poseStreamController = StreamController.broadcast();
-  static RunMode _runngingMode = RunMode.IMAGE;
+  static RunMode _runningMode = RunMode.IMAGE;
+
+  static StreamSubscription? _poseSubscription;
+  static final StreamController<PoseDetectionResult> _poseStreamController = StreamController<PoseDetectionResult>.broadcast();
+
+  /// ID Texture untuk widget Texture
+  static int? _textureId;
+  static Size? _previewSize;
 
   /// Stream hasil deteksi pose realtime
   static Stream<PoseDetectionResult> get poseStream => _poseStreamController.stream;
 
   /// Mode operasi (IMAGE/VIDEO/LIVE_STREAM)
-  static RunMode get runningMode => _runngingMode;
+  static RunMode get runningMode => _runningMode;
 
-  /// Start camera di native
-  static Future<void> initialize({RunMode runningMode = RunMode.IMAGE}) async
+  /// ID Texture untuk widget Texture
+  static int? get textureId => _textureId;
+
+  /// Ukuran preview kamera dari native
+  static Size? get previewSize => _previewSize;
+
+
+  static Future<void> initialize({RunMode runningMode = RunMode.LIVE_STREAM}) async
   {
-    _runngingMode = runningMode;
-    await _methodChannel.invokeMethod("initialize", { "runningMode": runningMode.name } );
+    try {
+      if (await requestCameraPermission())
+      {
+        _runningMode = runningMode;
+        await _methodChannel.invokeMethod("initialize",
+            { "runningMode": runningMode.name, });
+      } else {
+        throw Exception("Camera permission denied");
+      }
+    } catch (e) {
+      print("Failed to initialize: $e");
+      rethrow;
+    }
   }
 
-  /// Deteksi dari image file (path lokal)
+  static Future<bool> requestCameraPermission() async
+  {
+    var status = await Permission.camera.status;
+    if (!status.isGranted)
+    { status = await Permission.camera.request(); }
+
+    return status.isGranted;
+  }
+
+  /// Start native camera and get texture ID
+  static Future<void> startCamera({bool useFrontCamera = true}) async
+  {
+    try {
+      final result = await _methodChannel
+          .invokeMethod<Map<dynamic, dynamic>>("startNativeCamera",
+            { "useFrontCamera": useFrontCamera, });
+
+      if (result != null) {
+        _textureId = result["textureId"] as int?;
+        final width = result["previewWidth"] as double?;
+        final height = result["previewHeight"] as double?;
+
+        if (width != null && height != null) {
+          _previewSize = Size(width, height);
+        }
+      }
+
+    } catch (e) {
+      print("Failed to start native camera: $e");
+      rethrow;
+    }
+  }
+
+  /// Stop native camera
+  static Future<void> stopCamera() async
+  {
+    try {
+      await _methodChannel.invokeMethod("stopNativeCamera");
+      _textureId = null;
+      _previewSize = null;
+    } catch (e) {
+      print("Failed to stop native camera: $e");
+      rethrow;
+    }
+  }
+
+  /// Switch between front and back camera
+  static Future<bool> switchCamera() async
+  {
+    try {
+      final result = await _methodChannel.invokeMethod("switchCamera");
+      return result["isFrontCamera"] as bool;
+    } catch (e) {
+      print("Failed to switch camera: $e");
+      rethrow;
+    }
+  }
+
+  /// Check if camera is running
+  static Future<bool> isCameraRunning() async
+  {
+    try {
+      return await _methodChannel.invokeMethod("isCameraRunning") as bool;
+    } catch (e) {
+      print("Failed to check camera status: $e");
+      return false;
+    }
+  }
+
+  /// Start listening to pose detection results
+  static void startPoseListening()
+  {
+    _poseSubscription ??=
+        _poseEventChannel
+            .receiveBroadcastStream()
+            .listen((event)
+        {
+          if (event is Map) {
+            final parsed = _parseResult(event.cast<String, dynamic>());
+            _poseStreamController.add(parsed);
+          }
+        },
+          onError: (e) => print("Pose stream error: $e"),
+        );
+  }
+
+  /// Stop listening to all streams
+  static void stopListening()
+  {
+    _poseSubscription?.cancel();
+    _poseSubscription = null;
+  }
+
+  /// Dispose all resources
+  static void dispose()
+  {
+    stopListening();
+    _poseStreamController.close();
+  }
+
+  /// Detect pose from image file
   static Future<PoseDetectionResult> detectImage(String path) async
   {
-    final result = await _methodChannel
-        .invokeMethod<Map<dynamic, dynamic>>("detectImage", {"path": path} );
-
-    if (result == null) { return PoseDetectionResult.empty(0); }
-    return _parseResult(result.cast<String, dynamic>());
+    try {
+      final result = await _methodChannel.invokeMethod<Map<dynamic, dynamic>>(
+        "detectImage", { "path": path },
+      );
+      if (result == null) return PoseDetectionResult.empty(0);
+      return _parseResult(result.cast<String, dynamic>());
+    } catch (e) {
+      print("Failed to detect image: $e");
+      return PoseDetectionResult.empty(0);
+    }
   }
 
+  /// Detect pose from CameraImage stream
   static Future<void> detectImageStream(CameraImage image) async
   {
     try {
@@ -55,27 +183,6 @@ class PoseDetectionService
     } catch (e) {
       print("Gagal mengirim frame ke native: $e");
     }
-  }
-
-  /// Mulai listen event stream (realtime camera)
-  static void startListening()
-  {
-    _subscription ??= _eventChannel
-        .receiveBroadcastStream()
-        .listen((event)
-      {
-        if (event is Map) {
-          final parsed = _parseResult(event.cast<String, dynamic>());
-          _poseStreamController.add(parsed);
-        }
-      },
-      onError: (e) { print("Pose stream error: $e"); },
-    );
-  }
-
-  static void stopListening() {
-    _subscription?.cancel();
-    _subscription = null;
   }
 
   // Konversi YUV_420 ke JPEG
@@ -117,13 +224,14 @@ class PoseDetectionService
     return Uint8List.fromList(img.encodeJpg(yuvImage, quality: 75));
   }
 
+  /// Parse hasil deteksi pose dari native
   static PoseDetectionResult _parseResult(Map<String, dynamic> map)
   {
     final List<dynamic> rawLandmarks = map["landmarks"] ?? [];
     final landmarks = <PoseLandmarkType, PoseLandmark>{};
 
-    for (int i = 0; i < rawLandmarks.length; i++)
-    {
+    for (int i = 0; i < rawLandmarks.length; i++) {
+      if (i >= PoseLandmarkType.values.length) break;
       final lm = rawLandmarks[i];
       final type = PoseLandmarkType.values[i];
 

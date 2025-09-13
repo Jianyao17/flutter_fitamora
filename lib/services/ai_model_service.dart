@@ -36,7 +36,8 @@ class AIModelService {
     }
   }
 
-  Future<void> _loadPlankScalerParams() async {
+  Future<void> _loadPlankScalerParams() async
+  {
     final jsonString = await rootBundle.loadString('assets/models/plank_scaler_params.json');
     final params = json.decode(jsonString);
     _plankScalerMean = (params['mean'] as List?)

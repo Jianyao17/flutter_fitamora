@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
 
 import '../models/exercise/exercise_type.dart';
 import '../services/pose_detection_service.dart';
-import '../services/pose_rigging_painter.dart';
 import '../services/realtime_exercise_service.dart';
+import '../widgets/pose_camera_view.dart';
 
 class RealtimeExerciseDemoPage extends StatefulWidget {
   const RealtimeExerciseDemoPage({super.key});
@@ -14,24 +13,17 @@ class RealtimeExerciseDemoPage extends StatefulWidget {
   State<RealtimeExerciseDemoPage> createState() => _RealtimeExerciseDemoPageState();
 }
 
-class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
-  CameraController? _camera;
-  List<CameraDescription> _cameras = const [];
-  CameraLensDirection _preferredLens = CameraLensDirection.front;
-
-  bool _busy = false;
+class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage>
+{
+  bool _useFrontCamera = true;
+  bool _isInitialized = false;
   String? _error;
 
   final _exerciseTypes = ExerciseType.values;
 
-  // FPS tracking
-  int _frames = 0;
-  DateTime _fpsStart = DateTime.now();
-  double _fps = 0.0;
-
-  // Frame skipping
+  final Stopwatch _fpsStopwatch = Stopwatch();
   int _frameCounter = 0;
-  final int _detectionInterval = 3;
+  double _fps = 0.0;
 
   @override
   void initState() {
@@ -39,119 +31,105 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
     _init();
   }
 
-  Future<void> _init() async {
+  Future<void> _init() async
+  {
     try {
-      await PoseDetectionService.initialize(runningMode: RunMode.LIVE_STREAM);
-      PoseDetectionService.startListening();
+      setState(() {
+        _error = null;
+      });
 
-      // Mulai service, StreamBuilder akan menangani sisanya.
+      // Initialize native camera service
+      await PoseDetectionService.initialize(runningMode: RunMode.LIVE_STREAM);
+
+      // Start exercise service
       await RealtimeExerciseService.I.start(exerciseType: ExerciseType.jumpingJacks);
 
-      _cameras = await availableCameras();
-      await _initCamera(_preferredLens);
+      // Mulai Stopwatch saat inisialisasi berhasil
+      _fpsStopwatch.start();
 
-    } catch (e) {
-      if(mounted) setState(() => _error = 'Init error: $e');
-    }
-  }
-
-  Future<void> _initCamera(CameraLensDirection lens) async
-  {
-    try {
-      if (_camera != null)
-      {
-        await _camera!.stopImageStream();
-        await _camera!.dispose();
-        _camera = null;
-      }
-
-      final cam = _cameras.firstWhere(
-          (c) => c.lensDirection == lens,
-          orElse: () => _cameras.first);
-
-      final ctrl = CameraController(cam,
-          ResolutionPreset.low,
-          imageFormatGroup: ImageFormatGroup.yuv420,
-          enableAudio: false);
-
-      await ctrl.initialize();
-
-      if (!mounted) return;
-      await ctrl.startImageStream(_process);
-
-      // Panggil setState sekali di sini untuk membangun ulang UI setelah kamera siap.
       setState(() {
-        _camera = ctrl;
-        _preferredLens = lens;
+        _isInitialized = true;
       });
+
     } catch (e) {
-      if(mounted) setState(() => _error = 'Camera init error: $e');
+      setState(() {
+        _error = 'Init error: $e';
+      });
     }
-  }
-
-  void _process(CameraImage image)
-  {
-    _frameCounter++;
-    if (_frameCounter % _detectionInterval != 0) return;
-    if (_busy) return;
-    _busy = true;
-
-    // Perhitungan FPS tetap di sini
-    _frames++;
-    final now = DateTime.now();
-    final dt = now.difference(_fpsStart).inMilliseconds;
-    if (dt >= 1000)
-    {
-      final newFps = (_frames * 1000 * _detectionInterval) / dt;
-      _frames = 0;
-      _fpsStart = now;
-
-      // Perbarui state FPS di sini agar widget chip bisa di-rebuild
-      if (mounted) setState(() => _fps = newFps);
-    }
-
-    PoseDetectionService.detectImageStream(image).whenComplete(() => _busy = false);
   }
 
   @override
   void dispose()
   {
+    // Hentikan stopwatch
+    _fpsStopwatch.stop();
     RealtimeExerciseService.I.stop();
-    _camera?.dispose();
-    PoseDetectionService.stopListening();
+
+    // Panggil dispose setelah semua service dihentikan
+    PoseDetectionService.dispose();
     super.dispose();
   }
 
   void _switchExercise(ExerciseType type)
   {
     RealtimeExerciseService.I.switchExercise(type);
-    // Panggil setState agar DropdownButton diperbarui nilainya
     setState(() {});
   }
 
-  void _resetExercise() => RealtimeExerciseService.I.resetExercise();
-  Future<void> _toggleLens() async => await _initCamera(_preferredLens == CameraLensDirection.back ? CameraLensDirection.front : CameraLensDirection.back);
+  void _resetExercise()
+  => RealtimeExerciseService.I.resetExercise();
+
+  Future<void> _toggleCamera() async
+  {
+    try {
+      // Saat ganti kamera, PoseCameraView akan handle start/stop,
+      // jadi kita tidak perlu reset stopwatch.
+      final isFrontCamera = await PoseDetectionService.switchCamera();
+      setState(() {
+        _useFrontCamera = isFrontCamera;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to switch camera: $e';
+      });
+    }
+  }
+
+  void _onCameraError(String error) {
+    setState(() {
+      _error = error;
+    });
+  }
+
 
   @override
   Widget build(BuildContext context)
   {
-    if (_camera == null || !_camera!.value.isInitialized)
+    if (!_isInitialized)
     {
       return Scaffold(
         appBar: AppBar(title: const Text('Realtime Exercise Demo')),
-        body: Center(child: _error != null ? Text(_error!) : const CircularProgressIndicator()),
+        body: Center(
+            child: _error != null
+                ? Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(_error!, style: const TextStyle(color: Colors.red)),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _init,
+                  child: const Text('Retry'),
+                ),
+              ],
+            )
+                : const CircularProgressIndicator()
+        ),
       );
     }
 
-    // Ambil exercise saat ini untuk header, yang tidak perlu di-rebuild terus-menerus
+
     final currentExercise = RealtimeExerciseService.I.current;
-
-    // Ambil ukuran layar untuk perhitungan rasio aspek
     final size = MediaQuery.of(context).size;
-
-    // Hitung rasio aspek kamera
-    // Hindari pembagian dengan nol jika aspectRatio tidak valid
-    final cameraAspectRatio = _camera!.value.aspectRatio;
 
     return Scaffold(
       backgroundColor: const Color(0xFF212121),
@@ -165,43 +143,47 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
                 stream: RealtimeExerciseService.I.stream,
                 builder: (context, snapshot)
                 {
+                  _frameCounter++;
+                  if (_fpsStopwatch.elapsedMilliseconds >= 1000)
+                  {
+                    // Hitung FPS
+                    _fps = (_frameCounter * 1000) / _fpsStopwatch.elapsedMilliseconds;
+                    // Reset stopwatch dan counter
+                    _fpsStopwatch.reset();
+                    _frameCounter = 0;
+
+                    // Panggil setState setelah build selesai untuk menghindari error
+                    WidgetsBinding.instance
+                      .addPostFrameCallback((_)
+                      {
+                          if (mounted) {
+                            setState(() {});
+                          }
+                      });
+                  }
+
                   final frame = snapshot.data;
-                  final pose = frame?.pose;
                   final ex = frame?.exercise ?? currentExercise;
 
                   return Column(
                     children: [
-                      // --- BAGIAN 1: Blok Kamera dengan ukuran pasti ---
-                      Container(
+                      SizedBox( // Gunakan SizedBox sebagai ganti Container
                         width: size.width,
-                        height: size.width * cameraAspectRatio,
+                        height: size.width * (4 / 3), // Aspect ratio 4:3
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            // Kamera Preview dengan rasio aspek yang benar
-                            ClipRect(
-                              child: FittedBox(
-                                fit: BoxFit.cover,
-                                child: SizedBox(
-                                  width: size.width,
-                                  height: size.width * cameraAspectRatio,
-                                  child: CameraPreview(_camera!),
-                                ),
-                              ),
+                            // Native Camera Preview dengan Pose Overlay
+                            PoseCameraView(
+                              useFrontCamera: _useFrontCamera,
+                              showPoseOverlay: true,
+                              onError: _onCameraError,
                             ),
-                            // Painter untuk pose
-                            CustomPaint(
-                              painter: PoseRiggingPainter(
-                                poseResult: pose,
-                                imageSize: pose?.imageSize ?? Size.zero,
-                                rotationDegrees: _camera!.description.sensorOrientation,
-                                mirror: _camera!.description.lensDirection == CameraLensDirection.front,
-                              ),
-                            ),
-                            // Overlay untuk status "BENAR/SALAH"
+
+                            // Status overlay (BENAR/SALAH)
                             _buildFormOverlay(ex),
 
-                            // Kartu feedback di bagian bawah tengah
+                            // Feedback card
                             if (ex.feedback.isNotEmpty || ex.completed)
                               Positioned(
                                 bottom: 16, left: 16, right: 16,
@@ -211,7 +193,7 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
                         ),
                       ),
 
-                      // --- BAGIAN 2: Panel Statistik yang mengisi sisa ruang ---
+                      // Stats panel
                       Expanded(
                         child: _buildStatsPanel(ex, frame),
                       ),
@@ -228,7 +210,6 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
 
   Widget _buildHeader(Exercise exercise)
   {
-    // Widget ini sekarang hanya akan di-rebuild saat _switchExercise dipanggil
     return Container(
       color: Colors.amber,
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -249,15 +230,29 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
                 value: type,
                 child: Text(
                   Exercise.create(type).name,
-                  style: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               )).toList(),
               onChanged: (newType) => newType != null ? _switchExercise(newType) : null,
             ),
           ),
-          IconButton(icon: Icon(_preferredLens == CameraLensDirection.back ? Icons.camera_front : Icons.camera_rear), onPressed: _toggleLens, tooltip: 'Switch camera', color: Colors.black),
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _resetExercise, tooltip: 'Reset', color: Colors.black),
+          IconButton(
+            icon: Icon(_useFrontCamera ? Icons.camera_rear : Icons.camera_front),
+            onPressed: _toggleCamera,
+            tooltip: 'Switch camera',
+            color: Colors.black,
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _resetExercise,
+            tooltip: 'Reset',
+            color: Colors.black,
+          ),
         ],
       ),
     );
@@ -277,21 +272,39 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 40, height: 40, decoration: BoxDecoration(color: exercise.isCorrect ? Colors.green : Colors.red, shape: BoxShape.circle), child: Icon(exercise.isCorrect ? Icons.check : Icons.close, color: Colors.white, size: 24)),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: exercise.isCorrect ? Colors.green : Colors.red,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                exercise.isCorrect ? Icons.check : Icons.close,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
             const SizedBox(height: 4),
-            Text(exercise.isCorrect ? 'BENAR' : 'SALAH', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+            Text(
+              exercise.isCorrect ? 'BENAR' : 'SALAH',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  // Ubah signature untuk menerima frame
   Widget _buildStatsPanel(Exercise exercise, ProcessedExerciseFrame? frame)
   {
     final poseDetected = frame?.isPoseDetected ?? false;
     return Container(
-      color: const Color(0xFF212121).withOpacity(0.8), // Beri sedikit transparansi
+      color: const Color(0xFF212121).withOpacity(0.8),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -301,23 +314,43 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
             children: [
               _chip('FPS', _fps.toStringAsFixed(1)),
               _chip('Inference', '${frame?.inferenceMs ?? 0} ms'),
-              _chip('Pose', poseDetected ? 'Detected' : 'Not Detected', valueColor: poseDetected ? Colors.greenAccent : Colors.redAccent),
-          ]),
+              _chip(
+                'Pose',
+                poseDetected ? 'Detected' : 'Not Detected',
+                valueColor: poseDetected ? Colors.greenAccent : Colors.redAccent,
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
-          Row(children: [
-            Expanded(child:
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    exercise.isTimed ? 'Waktu: ${exercise.elapsedSec.toStringAsFixed(1)}s / ${exercise.targetTimeSec}s' : 'Repetisi: ${exercise.count} / ${exercise.targetReps}',
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(value: exercise.progress, backgroundColor: Colors.grey.shade700, valueColor: AlwaysStoppedAnimation<Color>(exercise.isCorrect ? Colors.green : Colors.orange)),
-                ]
-              )),
-          ]),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      exercise.isTimed
+                          ? 'Waktu: ${exercise.elapsedSec.toStringAsFixed(1)}s / ${exercise.targetTimeSec}s'
+                          : 'Repetisi: ${exercise.count} / ${exercise.targetReps}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: exercise.progress,
+                      backgroundColor: Colors.grey.shade700,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        exercise.isCorrect ? Colors.green : Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -325,28 +358,28 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
 
   Widget _buildFeedbackCard(Exercise exercise)
   {
-    // Gunakan Column untuk menumpuk kotak feedback dan teks "Latihan Selesai"
-    // jika keduanya perlu ditampilkan.
     return Column(
-      mainAxisSize: MainAxisSize.min, // Agar Column tidak mengambil ruang berlebih
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.black.withOpacity(0.4),
-            borderRadius: BorderRadius.circular(8)
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Column(
             children: [
               Text(
                 exercise.feedback,
                 style: TextStyle(
-                  color: exercise.isCorrect ? Colors.greenAccent.shade100 : Colors.orangeAccent.shade100,
+                  color: exercise.isCorrect
+                      ? Colors.greenAccent.shade100
+                      : Colors.orangeAccent.shade100,
                   fontSize: 15,
-                  fontWeight: FontWeight.w500
+                  fontWeight: FontWeight.w500,
                 ),
-                textAlign: TextAlign.center
+                textAlign: TextAlign.center,
               ),
               if (exercise.type == ExerciseType.plank && exercise.aiFormStatus != "Unknown")
                 Padding(
@@ -354,27 +387,28 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
                   child: Text(
                     'AI Form: ${exercise.aiFormStatus} (Confidence: ${exercise.aiConfidence.toStringAsFixed(2)})',
                     style: TextStyle(
-                        fontSize: 12,
-                        color: exercise.aiFormStatus == "Correct" ? Colors.cyanAccent : Colors.yellowAccent,
-                        fontWeight: FontWeight.w500
+                      fontSize: 12,
+                      color: exercise.aiFormStatus == "Correct"
+                          ? Colors.cyanAccent
+                          : Colors.yellowAccent,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-            ]
-          )
+            ],
+          ),
         ),
-        // Tampilkan pesan selesai di bawah kartu jika latihan telah selesai
         if (exercise.completed)
           Padding(
             padding: const EdgeInsets.only(top: 12.0),
             child: Text(
-                '🎉 LATIHAN SELESAI! 🎉',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: Colors.greenAccent.shade400,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold
-                )
+              '🎉 LATIHAN SELESAI! 🎉',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.greenAccent.shade400,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
       ],
@@ -389,12 +423,23 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage> {
         color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text('$label: ', style: const TextStyle(color: Colors.white70, fontSize: 12)),
-        Text(value, style: TextStyle(color: valueColor, fontWeight: FontWeight.w600, fontSize: 12)),
-      ]),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$label: ',
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: valueColor,
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
-
-
