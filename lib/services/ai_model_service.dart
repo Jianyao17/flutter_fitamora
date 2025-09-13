@@ -19,21 +19,32 @@ class AIModelService {
 
   Future<void> loadModels() async {
     try {
+      print(" Loading AI models...");
+
+      // Load models dengan error handling
       _plankInterpreter = await Interpreter.fromAsset('assets/models/plank_model.tflite');
       _jjInterpreter = await Interpreter.fromAsset('assets/models/jumpingjack.tflite');
       _cobraInterpreter = await Interpreter.fromAsset('assets/models/cobrastretch.tflite');
+
+      // Load scaler parameters
       await _loadPlankScalerParams();
-      print("✓ AI Models and Scaler loaded successfully");
+
+      print("✅ AI Models loaded successfully");
     } catch (e) {
       print("❌ Error loading AI models: $e");
+      // Jangan throw error, biarkan app tetap jalan
     }
   }
 
   Future<void> _loadPlankScalerParams() async {
     final jsonString = await rootBundle.loadString('assets/models/plank_scaler_params.json');
     final params = json.decode(jsonString);
-    _plankScalerMean = (params['mean'] as List).map((e) => e as double).toList();
-    _plankScalerScale = (params['scale'] as List).map((e) => e as double).toList();
+    _plankScalerMean = (params['mean'] as List?)
+        ?.map((e) => (e as num).toDouble())
+        .toList() ?? <double>[];
+    _plankScalerScale = (params['scale'] as List?)
+        ?.map((e) => (e as num).toDouble())
+        .toList() ?? <double>[];
   }
 
   // Generic keypoint extractor
@@ -53,27 +64,28 @@ class AIModelService {
     }
 
     try {
-      // Dapatkan bentuk input dan output dari model
       final inputShape = interpreter.getInputTensor(0).shape;
       final outputShape = interpreter.getOutputTensor(0).shape;
 
+      // Perbaiki input formatting
       final inputArray = [input];
-      var output = List.filled(outputShape.reduce((a, b) => a * b), 0.0).reshape(outputShape);
+      final output = List.filled(outputShape.reduce((a, b) => a * b), 0.0);
 
       interpreter.run(inputArray, output);
 
-      final probabilities = output[0] as List<double>;
+      // Perbaiki output processing
+      final probabilities = output.cast<double>();
       double confidence = 0.0;
       int label = 0;
 
-      if (probabilities.length > 1) { // Multi-class classification
+      if (probabilities.length > 1) {
         for (int i = 0; i < probabilities.length; i++) {
           if (probabilities[i] > confidence) {
             confidence = probabilities[i];
             label = i;
           }
         }
-      } else { // Binary classification
+      } else {
         final val = probabilities[0];
         label = val >= 0.5 ? 1 : 0;
         confidence = label == 1 ? val : 1.0 - val;
@@ -83,6 +95,27 @@ class AIModelService {
     } catch (e) {
       return {'label': null, 'confidence': 0.0, 'message': 'Prediction error: $e'};
     }
+  }
+
+  // Implementasi scaling yang lebih akurat
+  Map<String, dynamic> _runInferenceWithScaling(List<double> input, Interpreter? interpreter) {
+    if (interpreter == null || _plankScalerMean == null || _plankScalerScale == null) {
+      return {'label': null, 'confidence': 0.0, 'message': 'Model/scaler not loaded'};
+    }
+
+    // Pastikan input length sesuai dengan scaler
+    if (input.length != _plankScalerMean!.length) {
+      return {'label': null, 'confidence': 0.0, 'message': 'Input size mismatch'};
+    }
+
+    // Apply scaling (StandardScaler formula: (x - mean) / scale)
+    final scaledInput = <double>[];
+    for (int i = 0; i < input.length; i++) {
+      scaledInput.add((input[i] - _plankScalerMean![i]) / _plankScalerScale![i]);
+    }
+
+    // Run inference
+    return _runInference(scaledInput, interpreter);
   }
 
   // ==================== PLANK ====================
@@ -100,25 +133,30 @@ class AIModelService {
       PoseLandmarkType.leftFootIndex, PoseLandmarkType.rightFootIndex
     ];
 
-    var input = _extractKeypoints(pose, landmarkTypes);
+    try {
+      // Validasi input
+      if (!pose.isPoseDetected) {
+        return {'status': 'Unknown', 'confidence': 0.0, 'message': 'No pose detected'};
+      }
 
-    if (input.length != _plankScalerMean!.length) return {'status': 'Error', 'confidence': 0.0, 'message': 'Input size mismatch'};
+      // Extract keypoints dengan validasi
+      final keypoints = _extractKeypoints(pose, landmarkTypes);
+      if (keypoints.length != _plankScalerMean!.length) {
+        return {'status': 'Error', 'confidence': 0.0, 'message': 'Invalid keypoint count'};
+      }
 
-    for (int i = 0; i < input.length; i++) {
-      input[i] = (input[i] - _plankScalerMean![i]) / _plankScalerScale![i];
+      // Run prediction dengan error handling
+      final result = _runInferenceWithScaling(keypoints, _plankInterpreter);
+
+      // Validasi hasil
+      if (result['label'] == null) {
+        return {'status': 'Error', 'confidence': 0.0, 'message': result['message']};
+      }
+
+      return result;
+    } catch (e) {
+      return {'status': 'Error', 'confidence': 0.0, 'message': 'Prediction failed: $e'};
     }
-
-    final result = _runInference(input, _plankInterpreter);
-    if(result['label'] == null) return {'status': 'Error', 'confidence': 0.0, 'message': result['message']};
-
-    String status = "Unknown";
-    switch (result['label']) {
-      case 0: status = "Correct"; break; // C
-      case 1: status = "High back"; break; // H
-      case 2: status = "Low back"; break; // L
-    }
-
-    return {'status': status, 'confidence': result['confidence'], 'message': 'AI Confidence: ${result['confidence'].toStringAsFixed(2)}'};
   }
 
   // ==================== JUMPING JACKS ====================
@@ -142,5 +180,18 @@ class AIModelService {
     ];
     final input = _extractKeypoints(pose, landmarkTypes);
     return _runInference(input, _cobraInterpreter);
+  }
+}
+
+extension ListExtension<T> on List<T> {
+  List<List<T>> reshape(List<int> shape) {
+    if (shape.length != 2) throw ArgumentError('Only 2D reshape supported');
+    final rows = shape[0];
+    final cols = shape[1];
+    final result = <List<T>>[];
+    for (int i = 0; i < rows; i++) {
+      result.add(sublist(i * cols, (i + 1) * cols));
+    }
+    return result;
   }
 }

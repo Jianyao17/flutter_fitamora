@@ -271,7 +271,11 @@ class PoseRiggingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant PoseRiggingPainter old) {
+  bool shouldRepaint(covariant PoseRiggingPainter old)
+  {
+    // Jika referensi objek sama, tidak perlu repaint
+    if (identical(old.poseResult, poseResult)) return false;
+
     return old.poseResult != poseResult ||
         old.imageSize != imageSize ||
         old.rotationDegrees != rotationDegrees ||
