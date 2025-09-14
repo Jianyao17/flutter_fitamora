@@ -110,9 +110,9 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
               _buildFeatureCard(
                 context: context,
-                title: 'Latihan Realtime',
+                title: 'Live Community',
                 imagePath: 'assets/build/a3.png', // Pastikan path benar
-                onTap: () => _navigateAndWaitChanges(context, const RealtimeLatihanPage()),
+                onTap: () {},
               ),
             ],
           ),

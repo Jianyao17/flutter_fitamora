@@ -177,13 +177,8 @@ class _DeteksiPosturPageState extends State<DeteksiPosturPage> {
                 );
               }
 
-              // Ke Halaman program latihan
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (c) => ProgramLatihanAktifPage(
-                      activeProgram: WorkoutDatabase.instance.activeWorkoutProgram),
-                ),
-              );
+              // Kembali ke halaman utama
+              Navigator.of(context).pop();
             });
           },
           icon: const Icon(Icons.fitness_center),
