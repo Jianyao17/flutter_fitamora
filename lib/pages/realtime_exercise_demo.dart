@@ -1,3 +1,5 @@
+// realtime_exercise_demo_page.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 
@@ -21,12 +23,9 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage>
 
   final _exerciseTypes = ExerciseType.values;
 
-  final Stopwatch _fpsStopwatch = Stopwatch();
-  int _frameCounter = 0;
-  double _fps = 0.0;
-
   @override
-  void initState() {
+  void initState()
+  {
     super.initState();
     _init();
   }
@@ -34,73 +33,48 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage>
   Future<void> _init() async
   {
     try {
-      setState(() {
-        _error = null;
-      });
+      setState(() { _error = null; });
 
-      // Initialize native camera service
       await PoseDetectionService.initialize(runningMode: RunMode.LIVE_STREAM);
-
-      // Start exercise service
       await RealtimeExerciseService.I.start(exerciseType: ExerciseType.jumpingJacks);
 
-      // Mulai Stopwatch saat inisialisasi berhasil
-      _fpsStopwatch.start();
-
-      setState(() {
-        _isInitialized = true;
-      });
-
+      setState(() { _isInitialized = true; });
     } catch (e) {
-      setState(() {
-        _error = 'Init error: $e';
-      });
+      setState(() { _error = 'Init error: $e'; });
     }
   }
 
   @override
   void dispose()
   {
-    // Hentikan stopwatch
-    _fpsStopwatch.stop();
     RealtimeExerciseService.I.stop();
-
-    // Panggil dispose setelah semua service dihentikan
     PoseDetectionService.dispose();
     super.dispose();
   }
 
-  void _switchExercise(ExerciseType type)
-  {
+  void _switchExercise(ExerciseType type) {
+
     RealtimeExerciseService.I.switchExercise(type);
     setState(() {});
   }
 
-  void _resetExercise()
-  => RealtimeExerciseService.I.resetExercise();
+  void _resetExercise() => RealtimeExerciseService.I.resetExercise();
 
   Future<void> _toggleCamera() async
   {
     try {
-      // Saat ganti kamera, PoseCameraView akan handle start/stop,
-      // jadi kita tidak perlu reset stopwatch.
       final isFrontCamera = await PoseDetectionService.switchCamera();
       setState(() {
         _useFrontCamera = isFrontCamera;
       });
     } catch (e) {
-      setState(() {
-        _error = 'Failed to switch camera: $e';
-      });
+      setState(() { _error = 'Failed to switch camera: $e'; });
     }
   }
 
   void _onCameraError(String error) {
-    setState(() {
-      _error = error;
-    });
+    setState(() { _error = error; });
   }
-
 
   @override
   Widget build(BuildContext context)
@@ -127,7 +101,6 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage>
       );
     }
 
-
     final currentExercise = RealtimeExerciseService.I.current;
     final size = MediaQuery.of(context).size;
 
@@ -143,47 +116,25 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage>
                 stream: RealtimeExerciseService.I.stream,
                 builder: (context, snapshot)
                 {
-                  _frameCounter++;
-                  if (_fpsStopwatch.elapsedMilliseconds >= 1000)
-                  {
-                    // Hitung FPS
-                    _fps = (_frameCounter * 1000) / _fpsStopwatch.elapsedMilliseconds;
-                    // Reset stopwatch dan counter
-                    _fpsStopwatch.reset();
-                    _frameCounter = 0;
-
-                    // Panggil setState setelah build selesai untuk menghindari error
-                    WidgetsBinding.instance
-                      .addPostFrameCallback((_)
-                      {
-                          if (mounted) {
-                            setState(() {});
-                          }
-                      });
-                  }
-
                   final frame = snapshot.data;
                   final ex = frame?.exercise ?? currentExercise;
 
                   return Column(
                     children: [
-                      SizedBox( // Gunakan SizedBox sebagai ganti Container
+                      SizedBox(
                         width: size.width,
-                        height: size.width * (4 / 3), // Aspect ratio 4:3
+                        height: size.width * (4 / 3),
                         child: Stack(
                           fit: StackFit.expand,
                           children: [
-                            // Native Camera Preview dengan Pose Overlay
                             PoseCameraView(
                               useFrontCamera: _useFrontCamera,
                               showPoseOverlay: true,
                               onError: _onCameraError,
                             ),
 
-                            // Status overlay (BENAR/SALAH)
                             _buildFormOverlay(ex),
 
-                            // Feedback card
                             if (ex.feedback.isNotEmpty || ex.completed)
                               Positioned(
                                 bottom: 16, left: 16, right: 16,
@@ -192,8 +143,6 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage>
                           ],
                         ),
                       ),
-
-                      // Stats panel
                       Expanded(
                         child: _buildStatsPanel(ex, frame),
                       ),
@@ -310,12 +259,10 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage>
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _chip('FPS', _fps.toStringAsFixed(1)),
               _chip('Inference', '${frame?.inferenceMs ?? 0} ms'),
-              _chip(
-                'Pose',
+              _chip('Pose',
                 poseDetected ? 'Detected' : 'Not Detected',
                 valueColor: poseDetected ? Colors.greenAccent : Colors.redAccent,
               ),
@@ -426,12 +373,10 @@ class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '$label: ',
+          Text('$label: ',
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
-          Text(
-            value,
+          Text(value,
             style: TextStyle(
               color: valueColor,
               fontWeight: FontWeight.w600,
