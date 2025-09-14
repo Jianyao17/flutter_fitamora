@@ -19,6 +19,7 @@ class MainActivity : FlutterActivity()
 {
     private val METHOD_CHANNEL = "com.example.fitamora/method"
     private val EVENT_CHANNEL = "com.example.fitamora/event"
+    private val OVERLAY_VIEW_TYPE = "com.example.fitamora/overlay_view"
 
     private var eventSink: EventChannel.EventSink? = null
 
@@ -28,6 +29,7 @@ class MainActivity : FlutterActivity()
 
     // Tambahkan variabel untuk Texture
     private var textureEntry: TextureRegistry.SurfaceTextureEntry? = null
+    private var poseRiggingRenderer: PoseRiggingRenderer? = null
 
     private val TAG = "MainActivity"
 
@@ -38,6 +40,15 @@ class MainActivity : FlutterActivity()
     {
         super.configureFlutterEngine(flutterEngine)
         backgroundExecutor = Executors.newSingleThreadExecutor()
+
+        // --- Daftarkan PlatformViewFactory di sini ---
+        val factory = PoseRiggingRenderer.Companion.Factory {
+            poseRiggingRenderer = PoseRiggingRenderer(this)
+            poseRiggingRenderer!!
+        }
+        flutterEngine
+            .platformViewsController.registry
+            .registerViewFactory(OVERLAY_VIEW_TYPE, factory)
 
         EventChannel(flutterEngine.dartExecutor.binaryMessenger, EVENT_CHANNEL)
             .setStreamHandler(object : EventChannel.StreamHandler
@@ -51,9 +62,6 @@ class MainActivity : FlutterActivity()
                     eventSink = null
                 }
             })
-
-        // HAPUS Frame channel
-        // EventChannel(flutterEngine.dartExecutor.binaryMessenger, FRAME_CHANNEL)...
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, METHOD_CHANNEL)
             .setMethodCallHandler { call, result ->
@@ -126,35 +134,7 @@ class MainActivity : FlutterActivity()
                             result.error("ERROR", "No path provided", null)
                         }
                     }
-                    "detectImageStream" -> {
-                        val imageBytes = call.argument<ByteArray>("imageBytes")
-                        if (imageBytes != null)
-                        {
-                            // Pastikan model dalam mode yang benar
-                            if (runningMode != RunningMode.LIVE_STREAM)
-                            {
-                                runningMode = RunningMode.LIVE_STREAM
-                                poseModel.setRunningMode(RunningMode.LIVE_STREAM)
-                            }
-                            backgroundExecutor.execute {
-                                // Decode JPEG byte array menjadi Bitmap
-                                val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-                                if (bitmap != null)
-                                {
-                                    val mpImage = BitmapImageBuilder(bitmap).build()
-                                    // Gunakan timestamp dari sistem untuk akurasi
-                                    poseModel.detectLiveStream(mpImage, SystemClock.uptimeMillis())
-                                    bitmap.recycle() // Bebaskan memori bitmap setelah digunakan
-                                } else {
-                                    Log.e(TAG, "Gagal decode byte array menjadi bitmap.")
-                                }
-                            }
-                            // Segera kembalikan success karena proses berjalan async
-                            result.success(null)
-                        } else {
-                            result.error("ERROR", "imageBytes tidak boleh null", null)
-                        }
-                    }
+
                     else -> result.notImplemented()
                 }
             }
@@ -172,9 +152,23 @@ class MainActivity : FlutterActivity()
                     Log.e(TAG, "Model error: $error")
                     runOnUiThread { eventSink?.error("ERROR", error, null) }
                 }
-                override fun onResult(bundle: PoseDetectionModel.ResultBundle) {
+                override fun onResult(bundle: PoseDetectionModel.ResultBundle)
+                {
+                    // 1. Kirim data landmark ke Flutter (untuk logika, jika ada)
                     val map = formatBundleToMap(bundle)
                     runOnUiThread { eventSink?.success(map) }
+
+                    // 2. Kirim hasil mentah ke PoseRiggingRenderer untuk digambar
+                    if (bundle.result.landmarks().isNotEmpty())
+                    {
+                        runOnUiThread {
+                            poseRiggingRenderer?.setResults(
+                                bundle.result,
+                                bundle.imageHeight,
+                                bundle.imageWidth
+                            )
+                        }
+                    }
                 }
             }
         )
@@ -241,6 +235,10 @@ class MainActivity : FlutterActivity()
             // Lepaskan texture entry
             textureEntry?.release()
             textureEntry = null
+
+            runOnUiThread {
+                poseRiggingRenderer?.clear()
+            }
 
             Log.i(TAG, "Native camera stopped and texture released")
         } catch (e: Exception) {

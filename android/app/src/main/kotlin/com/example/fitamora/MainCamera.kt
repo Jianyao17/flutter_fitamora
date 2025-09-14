@@ -37,7 +37,7 @@ class MainCamera(
     private var frameCount = 0
 
     // Ukuran preview default, bisa disesuaikan
-    val previewSize = Size(320, 240)
+    val previewSize = Size(480, 640)
 
     fun startCamera(useFrontCamera: Boolean = true)
     {

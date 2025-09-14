@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 
 import '../models/pose_mediapipe/pose_detection_result.dart';
@@ -28,12 +29,12 @@ class PoseCameraView extends StatefulWidget {
 class _PoseCameraViewState extends State<PoseCameraView>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin
 {
+  final String _overlayViewType = 'com.example.fitamora/overlay_view';
   bool _isInitialized = false;
   String? _error;
 
   int? _textureId;
   Size? _previewSize;
-  PoseDetectionResult? _lastPoseResult;
 
   late final Ticker _ticker;
   final Stopwatch _stopwatch = Stopwatch();
@@ -187,32 +188,19 @@ class _PoseCameraViewState extends State<PoseCameraView>
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Widget Texture untuk menampilkan preview kamera
+          // 1. Widget Texture untuk menampilkan preview kamera dari native
           Texture(textureId: _textureId!),
 
-          // Overlay pose detection
+          // 2. GANTI StreamBuilder dan CustomPaint dengan AndroidView
           if (widget.showPoseOverlay)
-            StreamBuilder<PoseDetectionResult>(
-              stream: PoseDetectionService.poseStream,
-              builder: (context, poseSnapshot) {
-                if (poseSnapshot.hasData) {
-                  _lastPoseResult = poseSnapshot.data;
-                }
-                if (_lastPoseResult != null) {
-                  return CustomPaint(
-                    painter: PoseRiggingPainter(
-                      poseResult: _lastPoseResult!,
-                      imageSize: _lastPoseResult!.imageSize ?? Size.zero,
-                      mirror: !widget.useFrontCamera,
-                      rotationDegrees: 0,
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
+            AndroidView(
+              viewType: _overlayViewType,
+              // Kita tidak perlu mengirim parameter saat pembuatan untuk kasus ini
+              creationParams: const <String, dynamic>{},
+              creationParamsCodec: StandardMessageCodec(),
             ),
 
-          // --- WIDGET FPS COUNTER ---
+          // 3. Widget untuk menampilkan FPS,
           _buildFpsCounter(),
         ],
       ),
