@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/exercise/exercise.dart';
 import '../../models/exercise/exercise_guide.dart';
 import '../../models/exercise/workout_plan.dart';
+import 'realtime_latihan_page.dart';
 
 class PersiapanLatihan extends StatefulWidget {
   final WorkoutPlan workoutPlan;
@@ -286,7 +287,13 @@ class _PersiapanLatihanState extends State<PersiapanLatihan> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 20.0),
                         child: ElevatedButton.icon(
-                          onPressed: () {},
+                          onPressed: ()
+                          {
+                            // Mulai latihan
+                            Navigator.of(context).push(
+                              MaterialPageRoute(builder: (build) => RealtimeLatihanPage())
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: theme.colorScheme.secondary,
                             foregroundColor: Colors.white,
@@ -298,7 +305,7 @@ class _PersiapanLatihanState extends State<PersiapanLatihan> {
                           ),
                           icon: const Icon(Icons.play_arrow_rounded),
                           label: const Text(
-                            'Mulai',
+                            'Pergi Latihan',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                         ),

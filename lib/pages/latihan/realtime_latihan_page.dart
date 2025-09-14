@@ -80,7 +80,7 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
     if (!_isInitialized)
     {
       return Scaffold(
-        appBar: AppBar(title: const Text('Realtime Exercise Demo')),
+        appBar: AppBar(title: const Text('Latihan Real-time')),
         body: Center(
             child: _error != null
                 ? Column(

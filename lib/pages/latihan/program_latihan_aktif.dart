@@ -5,6 +5,7 @@ import '../../models/exercise/exercise.dart';
 import '../../models/exercise/workout_plan.dart';
 import '../../models/exercise/workout_program.dart';
 import 'persiapan_latihan.dart';
+import 'realtime_latihan_page.dart';
 
 class ProgramLatihanAktifPage extends StatelessWidget {
   final WorkoutProgram activeProgram;
@@ -15,7 +16,11 @@ class ProgramLatihanAktifPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(activeProgram.title),
+        title: Text("Program Latihan Aktif",
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          )),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
@@ -26,12 +31,12 @@ class ProgramLatihanAktifPage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: ElevatedButton.icon(
           icon: const Icon(Icons.play_arrow_rounded),
-          onPressed: ()
-          => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => PersiapanLatihan(workoutPlan: activeProgram.dailyPlans.first)),
+          onPressed: () => Navigator.push(
+            context, MaterialPageRoute(
+              builder: (context) => RealtimeLatihanPage(),
+            ),
           ),
-          label: const Text('Mulai Latihan'),
+          label: const Text('Pergi Latihan'),
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 16),
             textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -103,6 +108,9 @@ class ProgramLatihanAktifPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(program.title, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+
           Text(program.description, style: theme.textTheme.bodyMedium),
           const SizedBox(height: 16),
           Row(
@@ -143,31 +151,41 @@ class ProgramLatihanAktifPage extends StatelessWidget {
     final Color headerColor = isCurrentDay ? theme.colorScheme.primary : theme.colorScheme.primary.withOpacity(0.8);
     final Color onHeaderColor = isCurrentDay ? theme.colorScheme.onPrimary : theme.colorScheme.onSurfaceVariant;
 
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: headerColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 2, blurRadius: 8, offset: const Offset(0, 4))],
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(15.0),
-            child: Image.asset(imagePath, width: 64, height: 64, fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(width: 64, height: 64, color: Colors.grey.shade300, child: const Icon(Icons.broken_image))),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(context,
+          MaterialPageRoute(
+            builder: (context)
+              => PersiapanLatihan(workoutPlan: workoutPlan),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Hari $dayNumber', style: theme.textTheme.labelLarge?.copyWith(color: onHeaderColor.withOpacity(0.8))),
-                Text(workoutPlan.title, style: theme.textTheme.titleMedium?.copyWith(color: onHeaderColor, fontWeight: FontWeight.bold)),
-              ],
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: headerColor,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 2, blurRadius: 8, offset: const Offset(0, 4))],
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(15.0),
+              child: Image.asset(imagePath, width: 64, height: 64, fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(width: 64, height: 64, color: Colors.grey.shade300, child: const Icon(Icons.broken_image))),
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Hari $dayNumber', style: theme.textTheme.labelLarge?.copyWith(color: onHeaderColor.withOpacity(0.8))),
+                  Text(workoutPlan.title, style: theme.textTheme.titleMedium?.copyWith(color: onHeaderColor, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

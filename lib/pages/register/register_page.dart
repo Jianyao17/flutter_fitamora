@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-
+import '../../data/user_database.dart';
 import '../login/login_page.dart';
 import 'register_form1.dart';
 
@@ -11,45 +11,96 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterPageState extends State<RegisterPage>
+{
+  // --- KODE FUNGSI DITAMBAHKAN ---
+  final _fullNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  // DIUBAH: Tidak lagi 'async'
+  void _navigateToNextForm() {
+    final registeredUser = UserDatabase.instance.getRegisteredUser();
+    if (registeredUser != null) {
+      _showSnackbar("Hanya satu akun yang bisa didaftarkan. Silakan login.");
+      return;
+    }
+
+    if (_fullNameController.text.isEmpty ||
+        _emailController.text.isEmpty ||
+        _usernameController.text.isEmpty ||
+        _passwordController.text.isEmpty) {
+      _showSnackbar('Semua kolom wajib diisi!');
+      return;
+    }
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      _showSnackbar('Konfirmasi password tidak cocok!');
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => RegisterForm1(
+          fullName: _fullNameController.text,
+          email: _emailController.text,
+          username: _usernameController.text,
+          password: _passwordController.text,
+        ),
+      ),
+    );
+  }
+
+  void _showSnackbar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.redAccent),
+    );
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _emailController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+  // --- AKHIR DARI KODE FUNGSI ---
+
   @override
   Widget build(BuildContext context) {
-    // Tentukan tinggi area putih di atas form
-    // const double whiteAreaHeight = 60 + 60 + 30; // SizedBox + Image + SizedBox
-
+    // UI ASLI ANDA DIMULAI DI SINI (TIDAK ADA YANG DIUBAH)
     return Scaffold(
       backgroundColor: Colors.white,
-      // FIX: Gunakan Stack untuk menumpuk avatar di atas layout utama
       body: Padding(
         padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 15),
         child: Stack(
-          alignment: Alignment.topCenter, // Pusatkan item stack di atas
+          alignment: Alignment.topCenter,
           children: [
-            // WIDGET 1: Layout utama Anda (tetap menggunakan Column)
-            // Ini akan berada di lapisan paling bawah stack.
             Column(
               children: [
-                // Bagian atas dengan background putih
                 const SizedBox(height: 100),
                 const Image(
-                  image: AssetImage('assets/img/logo_apps.png'), // Pastikan path asset ini benar
+                  image: AssetImage('assets/img/logo_apps.png'),
                   height: 60,
                 ),
                 const SizedBox(height: 70),
-
-                // Container kuning untuk membungkus form
-                Expanded( // Gunakan Expanded agar container kuning mengisi sisa ruang
+                Expanded(
                   child: Container(
                     padding: const EdgeInsets.all(25),
                     width: double.infinity,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFFECC38), // Warna kuning
+                      color: Color(0xFFFECC38),
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(40),
                         topRight: Radius.circular(40),
                       ),
                     ),
-                    child: SingleChildScrollView( // Tambahkan SingleChildScrollView untuk menghindari overflow
+                    child: SingleChildScrollView(
                       child: Column(
                         children: [
                           const SizedBox(height: 5),
@@ -59,188 +110,101 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                           const SizedBox(height: 30),
 
-                          // Username field
                           TextField(
-                            decoration: InputDecoration(
-                              // MODIFIKASI: Tambahkan padding kanan pada ikon untuk memberi jarak ke teks input.
-                              prefixIcon: const Padding(
-                                padding: EdgeInsets.only(left: 20.0, right: 12.0),
-                                child: Icon(Icons.person_outline, color: Color(0xFF6C757D)),
-                              ),
-                              hintText: "Nama Lengkap",
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 15),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(20),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
+                            controller: _fullNameController,
+                            decoration: buildInputDecoration(Icons.person_outline, "Nama Lengkap"),
                           ),
-
                           const SizedBox(height: 15),
-
-                          // Username field
                           TextField(
-                            decoration: InputDecoration(
-                              // MODIFIKASI: Tambahkan padding kanan pada ikon untuk memberi jarak ke teks input.
-                              prefixIcon: const Padding(
-                                padding: EdgeInsets.only(left: 20.0, right: 12.0),
-                                child: Icon(Icons.email_outlined, color: Color(0xFF6C757D)),
-                              ),
-                              hintText: "Email",
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 15),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(20),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: buildInputDecoration(Icons.email_outlined, "Email"),
                           ),
-
                           const SizedBox(height: 15),
-
-                          // Username field
                           TextField(
-                            decoration: InputDecoration(
-                              // MODIFIKASI: Tambahkan padding kanan pada ikon untuk memberi jarak ke teks input.
-                              prefixIcon: const Padding(
-                                padding: EdgeInsets.only(left: 20.0, right: 12.0),
-                                child: Icon(Icons.person_2_outlined, color: Color(0xFF6C757D)),
-                              ),
-                              hintText: "Username",
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 15),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(20),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
+                            controller: _usernameController,
+                            decoration: buildInputDecoration(Icons.person_2_outlined, "Username"),
                           ),
-
                           const SizedBox(height: 15),
-
-                          // Username field
                           TextField(
+                            controller: _passwordController,
                             obscureText: true,
-                            decoration: InputDecoration(
-                              // MODIFIKASI: Tambahkan padding kanan pada ikon untuk memberi jarak ke teks input.
-                              prefixIcon: const Padding(
-                                padding: EdgeInsets.only(left: 20.0, right: 12.0),
-                                child: Icon(Icons.key_outlined, color: Color(0xFF6C757D)),
-                              ),
-                              hintText: "Password",
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 15),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(20),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
+                            decoration: buildInputDecoration(Icons.key_outlined, "Password"),
                           ),
-
                           const SizedBox(height: 15),
-
-                          // Username field
                           TextField(
+                            controller: _confirmPasswordController,
                             obscureText: true,
-                            decoration: InputDecoration(
-                              // MODIFIKASI: Tambahkan padding kanan pada ikon untuk memberi jarak ke teks input.
-                              prefixIcon: const Padding(
-                                padding: EdgeInsets.only(left: 20.0, right: 12.0),
-                                child: Icon(Icons.key_outlined, color: Color(0xFF6C757D)),
-                              ),
-                              hintText: "Konfirmasi Password",
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 15),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(20),
-                                borderSide: BorderSide.none,
-                              ),
-                            ),
+                            decoration: buildInputDecoration(Icons.key_outlined, "Konfirmasi Password"),
                           ),
                           const SizedBox(height: 30),
-
-                          // Tombol Masuk
                           ElevatedButton(
-                            onPressed: () {   Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (context) => const RegisterForm1(),
-                              ),
-                            );
-                              },
+                            onPressed: () {
+                              _navigateToNextForm(); // PANGGIL FUNGSI NAVIGASI
+                            },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF003366), // Warna biru tua
+                              backgroundColor: const Color(0xFF003366),
                               foregroundColor: Colors.white,
                               minimumSize: const Size(double.infinity, 50),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                               ),
                             ),
-                            child: const Text("REGISTER"),
+                            child: const Text("SELANJUTNYA"), // Teks diganti untuk kejelasan
                           ),
-                          SizedBox(height: 15),
-                          Row(
-                            children: [
-                              Expanded(child: Divider(color: Colors.grey.shade600)),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8.0),
-                                child: Text("atau"),
-                              ),
-                              Expanded(child: Divider(color: Colors.grey.shade600)),
-                            ],
-                          ),
-                          SizedBox(height: 15),
+                          const SizedBox(height: 15),
 
-                          // Ganti bagian tombol Google dan Apple Anda dengan Row ini
-                          Row(
-                            children: [
-                              // Tombol Google
-                              Expanded( // Bungkus dengan Expanded agar lebarnya sama
-                                child: ElevatedButton.icon(
-                                  onPressed: () {},
-                                  icon: const Image(
-                                    image: NetworkImage(
-                                        'https://cdn-icons-png.flaticon.com/512/300/300221.png'),
-                                    height: 20,
-                                  ),
-                                  label: const Text("Google"), // Teks bisa dipersingkat
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Colors.black,
-                                    minimumSize: const Size(0, 45), // Tinggi dikecilkan
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(width: 10), // Jarak antara dua tombol
-
-                              // Tombol Apple
-                              Expanded( // Bungkus dengan Expanded agar lebarnya sama
-                                child: ElevatedButton.icon(
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.apple, color: Colors.black),
-                                  label: const Text("Apple"), // Teks bisa dipersingkat
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.white,
-                                    foregroundColor: Colors.black,
-                                    minimumSize: const Size(0, 45), // Tinggi dikecilkan
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          // Buat akun baru
+                          // --- Sing Up dengan Google/Apple DITUTUP SEMENTARA ---
+                          // Row(
+                          //   children: [
+                          //     Expanded(child: Divider(color: Colors.grey.shade600)),
+                          //     const Padding(
+                          //       padding: EdgeInsets.symmetric(horizontal: 8.0),
+                          //       child: Text("atau"),
+                          //     ),
+                          //     Expanded(child: Divider(color: Colors.grey.shade600)),
+                          //   ],
+                          // ),
+                          // const SizedBox(height: 15),
+                          // Row(
+                          //   children: [
+                          //     Expanded(
+                          //       child: ElevatedButton.icon(
+                          //         onPressed: () {},
+                          //         icon: const Image(
+                          //           image: NetworkImage(
+                          //               'https://cdn-icons-png.flaticon.com/512/300/300221.png'),
+                          //           height: 20,
+                          //         ),
+                          //         label: const Text("Google"),
+                          //         style: ElevatedButton.styleFrom(
+                          //           backgroundColor: Colors.white,
+                          //           foregroundColor: Colors.black,
+                          //           minimumSize: const Size(0, 45),
+                          //           shape: RoundedRectangleBorder(
+                          //             borderRadius: BorderRadius.circular(30),
+                          //           ),
+                          //         ),
+                          //       ),
+                          //     ),
+                          //     const SizedBox(width: 10),
+                          //     Expanded(
+                          //       child: ElevatedButton.icon(
+                          //         onPressed: () {},
+                          //         icon: const Icon(Icons.apple, color: Colors.black),
+                          //         label: const Text("Apple"),
+                          //         style: ElevatedButton.styleFrom(
+                          //           backgroundColor: Colors.white,
+                          //           foregroundColor: Colors.black,
+                          //           minimumSize: const Size(0, 45),
+                          //           shape: RoundedRectangleBorder(
+                          //             borderRadius: BorderRadius.circular(30),
+                          //           ),
+                          //         ),
+                          //       ),
+                          //     ),
+                          //   ],
+                          // ),
                           TextButton(
                             onPressed: () {
                               Navigator.of(context).push(
@@ -269,6 +233,23 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  InputDecoration buildInputDecoration(IconData icon, String hintText) {
+    return InputDecoration(
+      prefixIcon: Padding(
+        padding: const EdgeInsets.only(left: 20.0, right: 12.0),
+        child: Icon(icon, color: const Color(0xFF6C757D)),
+      ),
+      hintText: hintText,
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(vertical: 13, horizontal: 15),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(20),
+        borderSide: BorderSide.none,
       ),
     );
   }

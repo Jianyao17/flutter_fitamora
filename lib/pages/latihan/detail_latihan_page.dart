@@ -54,7 +54,7 @@ class DetailLatihan extends StatelessWidget
                       builder: (_) =>
                           PersiapanLatihan(workoutPlan: workoutPlan)),
                 ),
-                label: const Text('Mulai Latihan'),
+                label: const Text('Pergi Latihan'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
