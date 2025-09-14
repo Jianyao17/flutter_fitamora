@@ -9,6 +9,7 @@ import '../models/pose_mediapipe/pose_landmark_type.dart';
 class AIModelService {
   AIModelService._();
   static final AIModelService I = AIModelService._();
+  bool _isInitialized = false;
 
   Interpreter? _plankInterpreter;
   Interpreter? _jjInterpreter;
@@ -17,7 +18,13 @@ class AIModelService {
   List<double>? _plankScalerMean;
   List<double>? _plankScalerScale;
 
-  Future<void> loadModels() async {
+  Future<void> loadModels() async
+  {
+    if (_isInitialized)
+    {
+      print("AI Models already initialized.");
+      return;
+    }
     try {
       print(" Loading AI models...");
 
@@ -30,6 +37,7 @@ class AIModelService {
       await _loadPlankScalerParams();
 
       print("✅ AI Models loaded successfully");
+      _isInitialized = true;
     } catch (e) {
       print("❌ Error loading AI models: $e");
       // Jangan throw error, biarkan app tetap jalan

@@ -21,7 +21,8 @@ class RealtimeExerciseService {
   Stream<ProcessedExerciseFrame> get stream => _out.stream;
   Exercise get current => _exercise;
 
-  Future<void> start({ExerciseType exerciseType = ExerciseType.jumpingJacks}) async {
+  Future<void> start({ExerciseType exerciseType = ExerciseType.jumpingJacks}) async
+  {
     await AIModelService.I.loadModels(); // Pastikan model dimuat
     _exercise = Exercise.create(exerciseType);
     _sub ??= PoseDetectionService.poseStream.listen(_onPose);

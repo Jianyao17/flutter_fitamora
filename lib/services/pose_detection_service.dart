@@ -16,6 +16,7 @@ class PoseDetectionService
   static const EventChannel _poseEventChannel = EventChannel("com.example.fitamora/event");
 
   static RunMode _runningMode = RunMode.IMAGE;
+  static bool _isInitialized = false;
 
   static StreamSubscription? _poseSubscription;
   static final StreamController<PoseDetectionResult> _poseStreamController = StreamController<PoseDetectionResult>.broadcast();
@@ -39,12 +40,18 @@ class PoseDetectionService
 
   static Future<void> initialize({RunMode runningMode = RunMode.LIVE_STREAM}) async
   {
+    if (_isInitialized && _runningMode == runningMode) {
+      print("PoseDetectionService already initialized.");
+      return;
+    }
     try {
       if (await requestCameraPermission())
       {
         _runningMode = runningMode;
         await _methodChannel.invokeMethod("initialize",
             { "runningMode": runningMode.name, });
+
+        _isInitialized = true;
       } else {
         throw Exception("Camera permission denied");
       }
