@@ -8,7 +8,7 @@ import 'models/exercise/exercise_guide.dart';
 import 'models/exercise/workout_plan.dart';
 
 import 'models/exercise/workout_program.dart';
-import 'pages/login/login_page.dart';
+import 'pages/splash_screen.dart';
 import 'theme.dart';
 
 Future<void> main() async
@@ -26,12 +26,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context)
   {
-    WorkoutDatabase.instance.setActiveProgram(workoutProgram);
+    // WorkoutDatabase.instance.setActiveProgram(workoutProgram);
     return MaterialApp(
       title: 'Flutter Demo',
       theme: appTheme,
       debugShowCheckedModeBanner: false,
-      home: LoginPage(),
+      home: SplashScreen(),
     );
   }
 }
@@ -75,7 +75,7 @@ final WorkoutProgram workoutProgram = WorkoutProgram(
   title: 'Program Latihan Skoliosis',
   description: 'Program latihan selama 7 hari untuk membantu memperbaiki postur tubuh dan mengurangi ketegangan otot akibat skoliosis.',
   startDate: DateTime.now(),
-  totalDays: 7,
+  totalDays: 3,
   dailyPlans: [
     // HARI 1: Pengenalan dan Pemanasan
     WorkoutPlan(
@@ -145,102 +145,6 @@ final WorkoutProgram workoutProgram = WorkoutProgram(
           sets: 2,
           duration: 30, // detik
           rest: 20, // detik
-          guides: plankGuides,
-        ),
-      ],
-    ),
-    // HARI 4: Istirahat Aktif
-    WorkoutPlan(
-      title: 'Istirahat Aktif',
-      description: 'Fokus pada peregangan ringan untuk pemulihan otot.',
-      imagePath: 'https://i.imgur.com/pYqF8zM.png', // Contoh gambar untuk hari 4
-      exercises: [
-        Exercise(
-          name: 'Cobra Stretch',
-          description: 'Peregangan santai untuk menjaga kelenturan.',
-          sets: 3,
-          duration: 25, // detik
-          rest: 20, // detik
-          guides: cobraStretchGuides,
-        ),
-      ],
-    ),
-    // HARI 5: Peningkatan Intensitas
-    WorkoutPlan(
-      title: 'Peningkatan Intensitas',
-      description: 'Meningkatkan tantangan untuk membangun kekuatan lebih lanjut.',
-      imagePath: 'https://i.imgur.com/L3gHw8f.png', // Contoh gambar untuk hari 5
-      exercises: [
-        Exercise(
-          name: 'Jumping Jacks',
-          description: 'Meningkatkan detak jantung dan membakar kalori.',
-          sets: 2,
-          rep: 25,
-          rest: 15, // detik
-          guides: jumpingJacksGuides,
-        ),
-        Exercise(
-          name: 'Plank',
-          description: 'Tantang otot inti Anda dengan durasi yang lebih lama.',
-          sets: 3,
-          duration: 35, // detik
-          rest: 20, // detik
-          guides: plankGuides,
-        ),
-        Exercise(
-          name: 'Cobra Stretch',
-          description: 'Pendinginan dengan peregangan yang menenangkan.',
-          sets: 2,
-          duration: 30, // detik
-          rest: 15, // detik
-          guides: cobraStretchGuides,
-        ),
-      ],
-    ),
-    // HARI 6: Daya Tahan Inti
-    WorkoutPlan(
-      title: 'Daya Tahan Inti',
-      description: 'Fokus penuh pada penguatan otot inti untuk postur maksimal.',
-      imagePath: 'https://i.imgur.com/8xJjR9t.png', // Contoh gambar untuk hari 6
-      exercises: [
-        Exercise(
-          name: 'Plank',
-          description: 'Dorong batas Anda untuk daya tahan otot inti terbaik.',
-          sets: 3,
-          duration: 45, // detik
-          rest: 20, // detik
-          guides: plankGuides,
-        ),
-        Exercise(
-          name: 'Jumping Jacks',
-          description: 'Sesi kardio singkat untuk menjaga energi.',
-          sets: 2,
-          rep: 20,
-          rest: 20, // detik
-          guides: jumpingJacksGuides,
-        ),
-      ],
-    ),
-    // HARI 7: Fleksibilitas Maksimal
-    WorkoutPlan(
-      title: 'Hari 7: Fleksibilitas Maksimal',
-      description: 'Mengakhiri minggu dengan peregangan mendalam untuk relaksasi.',
-      imagePath: 'https://i.imgur.com/C4uWz7k.png', // Contoh gambar untuk hari 7
-      exercises: [
-        Exercise(
-          name: 'Cobra Stretch',
-          description: 'Tahan peregangan untuk memaksimalkan fleksibilitas.',
-          sets: 3,
-          duration: 40, // detik
-          rest: 15, // detik
-          guides: cobraStretchGuides,
-        ),
-        Exercise(
-          name: 'Plank',
-          description: 'Satu set terakhir untuk menjaga kekuatan inti.',
-          sets: 1,
-          duration: 60, // detik
-          rest: 0,
           guides: plankGuides,
         ),
       ],

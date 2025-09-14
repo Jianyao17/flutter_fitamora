@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../data/user_database.dart';
+import '../data/workout_database.dart';
 import '../models/user_model.dart';
 import '../models/exercise/workout_program.dart';
-import '../data/workout_database.dart';
-import '../data/user_database.dart';
 
 import 'latihan/list_latihan_page.dart';
 import 'latihan/program_latihan_aktif.dart';
@@ -18,52 +18,47 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage>
-{
-  // Method untuk navigasi yang sudah ada, ini bagus untuk me-refresh state
+class _HomePageState extends State<HomePage> {
   Future<void> _navigateAndWaitChanges(BuildContext context, Widget page) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (c) => page,
       ),
     );
-    // Panggil setState untuk membangun ulang HomePage dan mendapatkan data terbaru
     setState(() {});
   }
 
   @override
   Widget build(BuildContext context)
   {
-    // Ambil data user dan program latihan yang aktif
     final User activeUser = UserDatabase.instance.activeUser;
     final WorkoutProgram activeProgram = WorkoutDatabase.instance.activeWorkoutProgram;
 
+    // PERUBAHAN UTAMA: Variabel boolean untuk memeriksa apakah ada program aktif
+    final bool hasActiveProgram = activeProgram.totalDays > 0;
+
     return Scaffold(
-      // 1. TAMBAHKAN APPBAR
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 1.0,
-        // Hapus tombol back otomatis jika halaman ini adalah root setelah login
         automaticallyImplyLeading: false,
-        title: const Text('Fitamora',
+        title: const Text(
+          'Fitamora',
           textAlign: TextAlign.start,
           style: TextStyle(
             color: Colors.black87,
             fontWeight: FontWeight.bold,
           ),
         ),
-        centerTitle: true,
-        // Tambahkan tombol aksi untuk navigasi ke halaman profil
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline_rounded, color: Colors.black54, size: 28),
             tooltip: 'Profil Pengguna',
             onPressed: () {
-              // Gunakan method navigasi yang sudah ada untuk membuka halaman profil
               _navigateAndWaitChanges(context, const ProfilePage());
             },
           ),
-          const SizedBox(width: 8), // Beri sedikit jarak di kanan
+          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
@@ -72,24 +67,27 @@ class _HomePageState extends State<HomePage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 2. TAMBAHKAN HEADER PENYAMBUT PENGGUNA
               _buildWelcomeHeader(
-                // Jika nama kosong, tampilkan "Pengguna"
                 name: activeUser.fullName.isNotEmpty ? activeUser.fullName : 'Pengguna',
               ),
               const SizedBox(height: 24),
 
-              // Tampilkan kartu program aktif jika ada judulnya
-              if (activeProgram.title.isNotEmpty)
+              // --- LOGIKA TAMPILAN KARTU UTAMA ---
+              // Jika ADA program aktif, tampilkan kartu program.
+              // Jika TIDAK ADA, tampilkan kartu instruksi.
+              if (hasActiveProgram)
                 _buildActiveProgramCard(
                   title: activeProgram.title,
                   progress: activeProgram.progressPercent,
                   day: activeProgram.currentDay,
                   totalDays: activeProgram.totalDays,
-                ),
+                )
+              else
+                _buildInstructionCard(), // Memanggil widget baru
+              // ------------------------------------
+
               const SizedBox(height: 24),
 
-              // Judul untuk bagian fitur
               const Text(
                 'Jelajahi Fitur',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -99,21 +97,21 @@ class _HomePageState extends State<HomePage>
               _buildFeatureCard(
                 context: context,
                 title: 'Deteksi Postur Tubuh',
-                imagePath: 'assets/build/a1.png',
+                imagePath: 'assets/build/a1.png', // Pastikan path benar
                 onTap: () => _navigateAndWaitChanges(context, const DeteksiPosturPage()),
               ),
               const SizedBox(height: 16),
               _buildFeatureCard(
                 context: context,
                 title: 'Pilih Latihan',
-                imagePath: 'assets/build/a2.png',
+                imagePath: 'assets/build/a2.png', // Pastikan path benar
                 onTap: () => _navigateAndWaitChanges(context, const ListLatihanPage()),
               ),
               const SizedBox(height: 16),
               _buildFeatureCard(
                 context: context,
                 title: 'Latihan Realtime',
-                imagePath: 'assets/build/a3.png',
+                imagePath: 'assets/build/a3.png', // Pastikan path benar
                 onTap: () => _navigateAndWaitChanges(context, const RealtimeLatihanPage()),
               ),
             ],
@@ -123,8 +121,64 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // WIDGET BARU: Header untuk menyambut pengguna
-  Widget _buildWelcomeHeader({required String name}) {
+  // WIDGET BARU: Kartu instruksi saat tidak ada program aktif
+  Widget _buildInstructionCard()
+  {
+    return GestureDetector(
+      // Arahkan ke halaman Deteksi Postur saat diklik
+      onTap: () => _navigateAndWaitChanges(context, const DeteksiPosturPage()),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        decoration: BoxDecoration(
+          // Gunakan warna yang menarik perhatian
+          color: const Color(0xFF003366), // Biru tua sesuai tema
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 40),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Tidak Ada Program Aktif',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text('Mulai deteksi postur untuk mendapatkan program latihan yang dipersonalisasi.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
+                      height: 1.4, // Atur jarak antar baris
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  Widget _buildWelcomeHeader({required String name})
+  {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -147,83 +201,99 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // Widget untuk kartu program aktif (tidak ada perubahan)
   Widget _buildActiveProgramCard({
     required String title,
     required double progress,
     required int day,
     required int totalDays,
   }) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (c) => ProgramLatihanAktifPage(
-                activeProgram: WorkoutDatabase.instance.activeWorkoutProgram),
+    return Card(
+      elevation: 4.0, // Memberi efek bayangan agar terangkat
+      shadowColor: Colors.black.withOpacity(0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: InkWell( // Menggunakan InkWell untuk efek ripple saat ditekan
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (c) => ProgramLatihanAktifPage(
+                  activeProgram: WorkoutDatabase.instance.activeWorkoutProgram),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row( // Menggunakan Row untuk menempatkan ikon di kanan
+            children: [
+              // Konten utama (teks dan progress bar)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'PROGRAM LATIHAN AKTIF',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Hari $day dari $totalDays',
+                          style: const TextStyle(color: Colors.black54),
+                        ),
+                        Text(
+                          '${(progress * 100).toInt()}%',
+                          style: const TextStyle(
+                            color: Colors.black87,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.grey[300],
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF2C94C)),
+                        minHeight: 8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Ikon panah di sebelah kanan
+              const SizedBox(width: 16),
+              const Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.grey,
+                size: 20,
+              ),
+            ],
           ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'PROGRAM LATIHAN AKTIF',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Hari $day dari $totalDays',
-                  style: const TextStyle(color: Colors.black54),
-                ),
-                Text(
-                  '${(progress * 100).toInt()}% Selesai',
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                backgroundColor: Colors.grey[300],
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF2C94C)),
-                minHeight: 8,
-              ),
-            ),
-          ],
         ),
       ),
     );
   }
 
-  // Widget reusable untuk kartu fitur (tidak ada perubahan)
   Widget _buildFeatureCard({
     required BuildContext context,
     required String title,

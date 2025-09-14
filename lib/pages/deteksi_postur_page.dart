@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../data/workout_database.dart';
 import '../models/exercise/workout_plan.dart';
+import '../models/exercise/workout_program.dart';
 import '../models/posture/posture_result.dart';
 import '../services/posture_analysis_service.dart';
 import 'latihan/program_latihan_aktif.dart';
@@ -136,21 +137,45 @@ class _DeteksiPosturPageState extends State<DeteksiPosturPage> {
             {
               // Atur plan latihan berdasarkan hasil deteksi
               final exercises = _result!.analysis.exerciseProgram;
-              WorkoutPlan workoutPlan = WorkoutPlan(
-                title: "Latihan ${PostureAnalysisService.formatClassName(_result!.prediction.className)}",
-                description: "Program latihan yang disesuaikan untuk memperbaiki postur ${PostureAnalysisService.formatClassName(_result!.prediction.className)}.",
+              final postureName = PostureAnalysisService.formatClassName(_result!.prediction.className);
+
+              WorkoutPlan dailyPlan = WorkoutPlan(
+                title: "Perbaikan Postur $postureName",
+                description: "Fokus pada penguatan otot inti dan peregangan untuk postur Anda.",
                 exercises: exercises,
               );
-              WorkoutDatabase.instance.addWorkoutPlan(workoutPlan);
 
-              // Notifikasi user
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Program latihan "${workoutPlan.title}" telah ditambahkan!'),
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              );
+              if (WorkoutDatabase.instance.activeWorkoutProgram.totalDays <= 0)
+              {
+                WorkoutProgram newProgram = WorkoutProgram(
+                  title: "Program Perbaikan Postur $postureName",
+                  description: "Program latihan 3 hari yang dirancang khusus berdasarkan hasil deteksi postur Anda.",
+                  totalDays: 3,
+                  dailyPlans: [dailyPlan, dailyPlan, dailyPlan],
+                  startDate: DateTime.now(),
+                );
+                // Set sebagai program aktif
+                WorkoutDatabase.instance.setActiveProgram(newProgram);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Program latihan "${newProgram.title}" telah dibuat dan diatur sebagai program aktif!'),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
+              } else {
+                // Tambahkan plan ke program aktif
+                WorkoutDatabase.instance.addWorkoutPlan(dailyPlan);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Rencana latihan hari ini telah ditambahkan ke program aktif "${WorkoutDatabase.instance.activeWorkoutProgram.title}"!'),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
+              }
 
               // Ke Halaman program latihan
               Navigator.of(context).push(
