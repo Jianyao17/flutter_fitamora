@@ -28,7 +28,7 @@ class MyApp extends StatelessWidget {
   {
     // WorkoutDatabase.instance.setActiveProgram(workoutProgram);
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Fitamora',
       theme: appTheme,
       debugShowCheckedModeBanner: false,
       home: SplashScreen(),

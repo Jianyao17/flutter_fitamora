@@ -171,8 +171,23 @@ class ProgramLatihanAktifPage extends StatelessWidget {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(15.0),
-              child: Image.asset(imagePath, width: 64, height: 64, fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(width: 64, height: 64, color: Colors.grey.shade300, child: const Icon(Icons.broken_image))),
+              child: imagePath.startsWith('http')
+              ? Image.network( // Jika path adalah URL
+                imagePath,
+                width: 80, height: 80, fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                  Container(width: 80, height: 80,
+                    color: Colors.grey.shade300,
+                    child: const Icon(Icons.broken_image)),
+                )
+              : Image.asset( // Jika path adalah Aset
+                imagePath,
+                width: 80, height: 80, fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) =>
+                  Container(width: 80, height: 80,
+                    color: Colors.grey.shade300,
+                    child: const Icon(Icons.broken_image)),
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
