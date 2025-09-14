@@ -1,21 +1,19 @@
-// realtime_exercise_demo_page.dart
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-import '../models/exercise/exercise_type.dart';
-import '../services/pose_detection_service.dart';
-import '../services/realtime_exercise_service.dart';
-import '../widgets/pose_camera_view.dart';
+import '../../models/exercise/exercise_type.dart';
+import '../../services/pose_detection_service.dart';
+import '../../services/realtime_exercise_service.dart';
+import '../../widgets/pose_camera_view.dart';
 
-class RealtimeExerciseDemoPage extends StatefulWidget {
-  const RealtimeExerciseDemoPage({super.key});
+class RealtimeLatihanPage extends StatefulWidget {
+  const RealtimeLatihanPage({super.key});
 
   @override
-  State<RealtimeExerciseDemoPage> createState() => _RealtimeExerciseDemoPageState();
+  State<RealtimeLatihanPage> createState() => _RealtimeLatihanPageState();
 }
 
-class _RealtimeExerciseDemoPageState extends State<RealtimeExerciseDemoPage>
+class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
 {
   bool _useFrontCamera = true;
   bool _isInitialized = false;

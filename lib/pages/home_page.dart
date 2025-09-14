@@ -5,7 +5,7 @@ import '../models/exercise/workout_program.dart';
 import 'deteksi_postur_page.dart';
 import 'latihan/list_latihan_page.dart';
 import 'latihan/program_latihan_aktif.dart';
-import 'realtime_exercise_demo.dart';
+import 'latihan/realtime_latihan_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -65,7 +65,7 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
               _buildFeatureCard(
                 context: context,
-                title: 'Program Latihan',
+                title: 'Pilih Latihan',
                 imagePath: 'assets/build/a2.png',
                 onTap: () => _navigateAndWaitChanges(context, const ListLatihanPage()),
               ),
@@ -74,7 +74,7 @@ class _HomePageState extends State<HomePage> {
                 context: context,
                 title: 'Latihan Realtime',
                 imagePath: 'assets/build/a3.png',
-                onTap: () => _navigateAndWaitChanges(context, const RealtimeExerciseDemoPage()),
+                onTap: () => _navigateAndWaitChanges(context, const RealtimeLatihanPage()),
               ),
             ],
           ),

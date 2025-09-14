@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../../models/exercise/exercise.dart';
 import '../../models/exercise/workout_plan.dart';
 import '../../models/exercise/workout_program.dart';
-import '../persiapan_latihan.dart';
+import 'persiapan_latihan.dart';
 
 class ProgramLatihanAktifPage extends StatelessWidget {
   final WorkoutProgram activeProgram;

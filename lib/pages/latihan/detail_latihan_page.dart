@@ -4,7 +4,7 @@ import 'package:flutter/services.dart';
 import '../../data/workout_database.dart';
 import '../../models/exercise/exercise.dart';
 import '../../models/exercise/workout_plan.dart';
-import '../persiapan_latihan.dart';
+import 'persiapan_latihan.dart';
 
 class DetailLatihan extends StatelessWidget
 {
