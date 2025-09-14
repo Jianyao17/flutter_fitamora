@@ -168,6 +168,11 @@ class MainActivity : FlutterActivity()
                                 bundle.imageWidth
                             )
                         }
+                    } else {
+                        // Jika tidak ada hasil, bersihkan overlay
+                        runOnUiThread {
+                            poseRiggingRenderer?.clear()
+                        }
                     }
                 }
             }

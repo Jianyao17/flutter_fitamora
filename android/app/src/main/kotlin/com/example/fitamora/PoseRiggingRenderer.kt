@@ -74,8 +74,8 @@ class PoseRiggingRenderer(context: Context) : PlatformView
         // --- STYLING CONSTANTS (diadaptasi dari PoseRiggingPainter.dart) ---
         companion object {
             private const val LANDMARK_RADIUS = 8.0f     // 4.0 * 2
-            private const val JOINT_RADIUS = 12.0f      // 6.0 * 2
-            private const val CONNECTION_STROKE_WIDTH = 4.0f // 2.0 * 2
+            private const val JOINT_RADIUS = 16.0f      // 6.0 * 2
+            private const val CONNECTION_STROKE_WIDTH = 6.0f // 2.0 * 2
             private const val BORDER_STROKE_WIDTH = 3.0f   // 1.5 * 2
 
             // Warna (didefinisikan langsung, tidak perlu colors.xml)
