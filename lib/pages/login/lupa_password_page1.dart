@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../home_page.dart';
 import 'lupa_password_page2.dart';
 
 class LupaPassword extends StatefulWidget {
@@ -106,7 +107,13 @@ class _LupaPasswordState extends State<LupaPassword> {
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
-                              onPressed: () {},
+                              onPressed: ()
+                              {
+                                Navigator.of(context).pushAndRemoveUntil(
+                                  MaterialPageRoute(builder: (context) => const HomePage()),
+                                      (route) => false,
+                                );
+                              },
                               style: TextButton.styleFrom(
                                 foregroundColor: Colors.black87,
                               ),

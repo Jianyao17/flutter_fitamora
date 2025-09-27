@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart'; // Impor flutter_tts
 
 import '../../models/exercise/exercise_type.dart';
 import '../../services/pose_detection_service.dart';
@@ -13,72 +14,100 @@ class RealtimeLatihanPage extends StatefulWidget {
   State<RealtimeLatihanPage> createState() => _RealtimeLatihanPageState();
 }
 
-class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
-{
+class _RealtimeLatihanPageState extends State<RealtimeLatihanPage> {
   bool _useFrontCamera = true;
   bool _isInitialized = false;
   String? _error;
 
   final _exerciseTypes = ExerciseType.values;
 
+  // Instance FlutterTts
+  late FlutterTts _flutterTts;
+  String? _lastFeedback; // Untuk melacak feedback terakhir yang diucapkan
+
   @override
-  void initState()
-  {
+  void initState() {
     super.initState();
     _init();
+    _initTts(); // Inisialisasi TTS
   }
 
-  Future<void> _init() async
-  {
+  // Fungsi untuk inisialisasi Text-to-Speech
+  Future<void> _initTts() async {
+    _flutterTts = FlutterTts();
+    await _flutterTts.setLanguage("id-ID"); // Atur bahasa ke Bahasa Indonesia
+    await _flutterTts.setSpeechRate(0.5);
+    await _flutterTts.setVolume(1.0);
+    await _flutterTts.setPitch(1.0);
+  }
+
+  // Fungsi untuk berbicara
+  Future<void> _speak(String text) async {
+    if (text.isNotEmpty && text != _lastFeedback) {
+      _lastFeedback = text;
+      await _flutterTts.speak(text);
+    }
+  }
+
+  Future<void> _init() async {
     try {
-      setState(() { _error = null; });
+      setState(() {
+        _error = null;
+      });
 
       await PoseDetectionService.initialize(runningMode: RunMode.LIVE_STREAM);
       await RealtimeExerciseService.I.start(exerciseType: ExerciseType.jumpingJacks);
 
-      setState(() { _isInitialized = true; });
+      setState(() {
+        _isInitialized = true;
+      });
     } catch (e) {
-      setState(() { _error = 'Init error: $e'; });
+      setState(() {
+        _error = 'Init error: $e';
+      });
     }
   }
 
   @override
-  void dispose()
-  {
+  void dispose() {
     RealtimeExerciseService.I.stop();
-    PoseDetectionService.dispose();
+    _flutterTts.stop(); // Hentikan TTS saat dispose
     super.dispose();
   }
 
   void _switchExercise(ExerciseType type) {
-
     RealtimeExerciseService.I.switchExercise(type);
+    _lastFeedback = null; // Reset feedback terakhir saat ganti latihan
     setState(() {});
   }
 
-  void _resetExercise() => RealtimeExerciseService.I.resetExercise();
+  void _resetExercise() {
+    RealtimeExerciseService.I.resetExercise();
+    _lastFeedback = null; // Reset feedback terakhir saat reset
+  }
 
-  Future<void> _toggleCamera() async
-  {
+  Future<void> _toggleCamera() async {
     try {
       final isFrontCamera = await PoseDetectionService.switchCamera();
       setState(() {
         _useFrontCamera = isFrontCamera;
       });
     } catch (e) {
-      setState(() { _error = 'Failed to switch camera: $e'; });
+      setState(() {
+        _error = 'Failed to switch camera: $e';
+      });
     }
   }
 
   void _onCameraError(String error) {
-    setState(() { _error = error; });
+    setState(() {
+      _error = error;
+    });
   }
 
   @override
-  Widget build(BuildContext context)
-  {
-    if (!_isInitialized)
-    {
+  Widget build(BuildContext context) {
+    if (!_isInitialized) {
       return Scaffold(
         appBar: AppBar(title: const Text('Latihan Real-time')),
         body: Center(
@@ -94,8 +123,7 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
                 ),
               ],
             )
-                : const CircularProgressIndicator()
-        ),
+                : const CircularProgressIndicator()),
       );
     }
 
@@ -112,10 +140,16 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
             Expanded(
               child: StreamBuilder<ProcessedExerciseFrame>(
                 stream: RealtimeExerciseService.I.stream,
-                builder: (context, snapshot)
-                {
+                builder: (context, snapshot) {
                   final frame = snapshot.data;
                   final ex = frame?.exercise ?? currentExercise;
+
+                  // Pemicu suara untuk feedback dan status selesai
+                  if (ex.completed) {
+                    _speak('Latihan Selesai!');
+                  } else if (ex.feedback.isNotEmpty) {
+                    _speak(ex.feedback);
+                  }
 
                   return Column(
                     children: [
@@ -130,12 +164,12 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
                               showPoseOverlay: true,
                               onError: _onCameraError,
                             ),
-
                             _buildFormOverlay(ex),
-
                             if (ex.feedback.isNotEmpty || ex.completed)
                               Positioned(
-                                bottom: 16, left: 16, right: 16,
+                                bottom: 16,
+                                left: 16,
+                                right: 16,
                                 child: _buildFeedbackCard(ex),
                               ),
                           ],
@@ -155,8 +189,7 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
     );
   }
 
-  Widget _buildHeader(Exercise exercise)
-  {
+  Widget _buildHeader(Exercise exercise) {
     return Container(
       color: Colors.amber,
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -173,7 +206,8 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
               dropdownColor: Colors.amber.shade600,
               underline: const SizedBox.shrink(),
               icon: const Icon(Icons.arrow_drop_down, color: Colors.black),
-              items: _exerciseTypes.map((type) => DropdownMenuItem(
+              items: _exerciseTypes
+                  .map((type) => DropdownMenuItem(
                 value: type,
                 child: Text(
                   Exercise.create(type).name,
@@ -184,12 +218,15 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
-              )).toList(),
-              onChanged: (newType) => newType != null ? _switchExercise(newType) : null,
+              ))
+                  .toList(),
+              onChanged: (newType) =>
+              newType != null ? _switchExercise(newType) : null,
             ),
           ),
           IconButton(
-            icon: Icon(_useFrontCamera ? Icons.camera_rear : Icons.camera_front),
+            icon: Icon(
+                _useFrontCamera ? Icons.camera_rear : Icons.camera_front),
             onPressed: _toggleCamera,
             tooltip: 'Switch camera',
             color: Colors.black,
@@ -205,8 +242,7 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
     );
   }
 
-  Widget _buildFormOverlay(Exercise exercise)
-  {
+  Widget _buildFormOverlay(Exercise exercise) {
     return Positioned(
       top: 16,
       right: 16,
@@ -247,8 +283,7 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
     );
   }
 
-  Widget _buildStatsPanel(Exercise exercise, ProcessedExerciseFrame? frame)
-  {
+  Widget _buildStatsPanel(Exercise exercise, ProcessedExerciseFrame? frame) {
     final poseDetected = frame?.isPoseDetected ?? false;
     return Container(
       color: const Color(0xFF212121).withOpacity(0.8),
@@ -260,9 +295,11 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _chip('Inference', '${frame?.inferenceMs ?? 0} ms'),
-              _chip('Pose',
+              _chip(
+                'Pose',
                 poseDetected ? 'Detected' : 'Not Detected',
-                valueColor: poseDetected ? Colors.greenAccent : Colors.redAccent,
+                valueColor:
+                poseDetected ? Colors.greenAccent : Colors.redAccent,
               ),
             ],
           ),
@@ -301,8 +338,7 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
     );
   }
 
-  Widget _buildFeedbackCard(Exercise exercise)
-  {
+  Widget _buildFeedbackCard(Exercise exercise) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -326,7 +362,8 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
                 ),
                 textAlign: TextAlign.center,
               ),
-              if (exercise.type == ExerciseType.plank && exercise.aiFormStatus != "Unknown")
+              if (exercise.type == ExerciseType.plank &&
+                  exercise.aiFormStatus != "Unknown")
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
@@ -360,8 +397,7 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
     );
   }
 
-  Widget _chip(String label, String value, {Color valueColor = Colors.white})
-  {
+  Widget _chip(String label, String value, {Color valueColor = Colors.white}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -371,10 +407,12 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('$label: ',
+          Text(
+            '$label: ',
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
-          Text(value,
+          Text(
+            value,
             style: TextStyle(
               color: valueColor,
               fontWeight: FontWeight.w600,

@@ -19,7 +19,7 @@ class PoseDetectionService
   static bool _isInitialized = false;
 
   static StreamSubscription? _poseSubscription;
-  static final StreamController<PoseDetectionResult> _poseStreamController = StreamController<PoseDetectionResult>.broadcast();
+  static StreamController<PoseDetectionResult> _poseStreamController = StreamController<PoseDetectionResult>.broadcast();
 
   /// ID Texture untuk widget Texture
   static int? _textureId;
@@ -40,6 +40,10 @@ class PoseDetectionService
 
   static Future<void> initialize({RunMode runningMode = RunMode.LIVE_STREAM}) async
   {
+    if (_poseStreamController.isClosed) {
+      _poseStreamController = StreamController<PoseDetectionResult>.broadcast();
+    }
+
     if (_isInitialized && _runningMode == runningMode) {
       print("PoseDetectionService already initialized.");
       return;
@@ -158,13 +162,21 @@ class PoseDetectionService
   static void dispose()
   {
     stopListening();
-    _poseStreamController.close();
+    if (!_poseStreamController.isClosed) {
+      _poseStreamController.close();
+    }
+    _isInitialized = false;
   }
 
   /// Detect pose from image file
   static Future<PoseDetectionResult> detectImage(String path) async
   {
     try {
+      if (_isInitialized && _runningMode != RunMode.IMAGE) 
+      {
+        initialize(runningMode: RunMode.IMAGE);
+        print("Reloding Mediapipe to Image Mode");
+      }
       final result = await _methodChannel.invokeMethod<Map<dynamic, dynamic>>(
         "detectImage", { "path": path },
       );
