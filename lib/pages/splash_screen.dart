@@ -63,6 +63,22 @@ class _SplashScreenState extends State<SplashScreen>
               'assets/img/logo_apps.png', // PENTING: Pastikan path ini benar!
               width: 150, // Atur ukuran logo sesuai keinginan Anda
             ),
+            const SizedBox(height: 16),
+
+            Text('Fitamora',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 24,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            Text('Sync your strength',
+              style: TextStyle(
+                fontWeight: FontWeight.normal,
+                fontSize: 16,
+              )),
+
             const SizedBox(height: 24), // Jarak antara logo dan loading
 
             // 2. Loading circular di bawah logo

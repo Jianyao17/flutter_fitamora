@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_tts/flutter_tts.dart'; // Impor flutter_tts
+import 'package:flutter_tts/flutter_tts.dart';
 
 import '../../models/exercise/exercise_type.dart';
 import '../../services/pose_detection_service.dart';
@@ -21,88 +21,72 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage> {
 
   final _exerciseTypes = ExerciseType.values;
 
-  // Instance FlutterTts
   late FlutterTts _flutterTts;
-  String? _lastFeedback; // Untuk melacak feedback terakhir yang diucapkan
+  String? _lastFeedback;
 
   @override
   void initState() {
     super.initState();
     _init();
-    _initTts(); // Inisialisasi TTS
+    _initTts();
   }
 
-  // Fungsi untuk inisialisasi Text-to-Speech
   Future<void> _initTts() async {
     _flutterTts = FlutterTts();
-    await _flutterTts.setLanguage("id-ID"); // Atur bahasa ke Bahasa Indonesia
+    await _flutterTts.setLanguage("id-ID");
     await _flutterTts.setSpeechRate(0.5);
     await _flutterTts.setVolume(1.0);
     await _flutterTts.setPitch(1.0);
   }
 
-  // Fungsi untuk berbicara
   Future<void> _speak(String text) async {
-    if (text.isNotEmpty && text != _lastFeedback) {
-      _lastFeedback = text;
-      await _flutterTts.speak(text);
+    final mainFeedback = text.split('|').first.trim();
+    if (mainFeedback.isNotEmpty && mainFeedback != _lastFeedback) {
+      _lastFeedback = mainFeedback;
+      await _flutterTts.speak(mainFeedback);
     }
   }
 
   Future<void> _init() async {
     try {
-      setState(() {
-        _error = null;
-      });
-
+      setState(() { _error = null; });
       await PoseDetectionService.initialize(runningMode: RunMode.LIVE_STREAM);
       await RealtimeExerciseService.I.start(exerciseType: ExerciseType.jumpingJacks);
-
-      setState(() {
-        _isInitialized = true;
-      });
+      setState(() { _isInitialized = true; });
     } catch (e) {
-      setState(() {
-        _error = 'Init error: $e';
-      });
+      setState(() { _error = 'Init error: $e'; });
     }
   }
 
   @override
   void dispose() {
     RealtimeExerciseService.I.stop();
-    _flutterTts.stop(); // Hentikan TTS saat dispose
+    _flutterTts.stop();
     super.dispose();
   }
 
   void _switchExercise(ExerciseType type) {
     RealtimeExerciseService.I.switchExercise(type);
-    _lastFeedback = null; // Reset feedback terakhir saat ganti latihan
+    _lastFeedback = null;
     setState(() {});
   }
 
   void _resetExercise() {
     RealtimeExerciseService.I.resetExercise();
-    _lastFeedback = null; // Reset feedback terakhir saat reset
+    _lastFeedback = null;
   }
 
   Future<void> _toggleCamera() async {
     try {
       final isFrontCamera = await PoseDetectionService.switchCamera();
-      setState(() {
-        _useFrontCamera = isFrontCamera;
-      });
+      setState(() { _useFrontCamera = isFrontCamera; });
     } catch (e) {
-      setState(() {
-        _error = 'Failed to switch camera: $e';
-      });
+      setState(() { _error = 'Failed to switch camera: $e'; });
     }
   }
 
   void _onCameraError(String error) {
-    setState(() {
-      _error = error;
-    });
+    setState(() { _error = error; });
   }
 
   @override
@@ -117,10 +101,7 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage> {
               children: [
                 Text(_error!, style: const TextStyle(color: Colors.red)),
                 const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _init,
-                  child: const Text('Retry'),
-                ),
+                ElevatedButton(onPressed: _init, child: const Text('Retry')),
               ],
             )
                 : const CircularProgressIndicator()),
@@ -144,7 +125,6 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage> {
                   final frame = snapshot.data;
                   final ex = frame?.exercise ?? currentExercise;
 
-                  // Pemicu suara untuk feedback dan status selesai
                   if (ex.completed) {
                     _speak('Latihan Selesai!');
                   } else if (ex.feedback.isNotEmpty) {
@@ -175,9 +155,7 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage> {
                           ],
                         ),
                       ),
-                      Expanded(
-                        child: _buildStatsPanel(ex, frame),
-                      ),
+                      Expanded(child: _buildStatsPanel(ex, frame)),
                     ],
                   );
                 },
@@ -212,21 +190,16 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage> {
                 child: Text(
                   Exercise.create(type).name,
                   style: const TextStyle(
-                    color: Colors.black,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      color: Colors.black, fontSize: 20, fontWeight: FontWeight.bold),
                   overflow: TextOverflow.ellipsis,
                 ),
               ))
                   .toList(),
-              onChanged: (newType) =>
-              newType != null ? _switchExercise(newType) : null,
+              onChanged: (newType) => newType != null ? _switchExercise(newType) : null,
             ),
           ),
           IconButton(
-            icon: Icon(
-                _useFrontCamera ? Icons.camera_rear : Icons.camera_front),
+            icon: Icon(_useFrontCamera ? Icons.camera_rear : Icons.camera_front),
             onPressed: _toggleCamera,
             tooltip: 'Switch camera',
             color: Colors.black,
@@ -271,11 +244,7 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage> {
             const SizedBox(height: 4),
             Text(
               exercise.isCorrect ? 'BENAR' : 'SALAH',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -298,8 +267,7 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage> {
               _chip(
                 'Pose',
                 poseDetected ? 'Detected' : 'Not Detected',
-                valueColor:
-                poseDetected ? Colors.greenAccent : Colors.redAccent,
+                valueColor: poseDetected ? Colors.greenAccent : Colors.redAccent,
               ),
             ],
           ),
@@ -314,19 +282,15 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage> {
                       exercise.isTimed
                           ? 'Waktu: ${exercise.elapsedSec.toStringAsFixed(1)}s / ${exercise.targetTimeSec}s'
                           : 'Repetisi: ${exercise.count} / ${exercise.targetReps}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style:
+                      const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
                       value: exercise.progress,
                       backgroundColor: Colors.grey.shade700,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        exercise.isCorrect ? Colors.green : Colors.orange,
-                      ),
+                      valueColor:
+                      AlwaysStoppedAnimation<Color>(exercise.isCorrect ? Colors.green : Colors.orange),
                     ),
                   ],
                 ),
@@ -339,6 +303,10 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage> {
   }
 
   Widget _buildFeedbackCard(Exercise exercise) {
+    // Cek apakah ada feedback AI yang spesifik untuk ditampilkan
+    final hasPlankAI = exercise.type == ExerciseType.plank && exercise.aiFormStatus != 'Unknown';
+    final hasSeatedRowAI = exercise.type == ExerciseType.seatedRow && exercise.aiFeedback.isNotEmpty;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -354,25 +322,35 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage> {
               Text(
                 exercise.feedback,
                 style: TextStyle(
-                  color: exercise.isCorrect
-                      ? Colors.greenAccent.shade100
-                      : Colors.orangeAccent.shade100,
+                  color: exercise.isCorrect ? Colors.greenAccent.shade100 : Colors.orangeAccent.shade100,
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),
                 textAlign: TextAlign.center,
               ),
-              if (exercise.type == ExerciseType.plank &&
-                  exercise.aiFormStatus != "Unknown")
+              // Tampilan AI untuk Plank
+              if (hasPlankAI)
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Text(
-                    'AI Form: ${exercise.aiFormStatus} (Confidence: ${exercise.aiConfidence.toStringAsFixed(2)})',
+                    'AI Form: ${exercise.aiFormStatus} (Conf: ${exercise.aiConfidence.toStringAsFixed(2)})',
                     style: TextStyle(
                       fontSize: 12,
-                      color: exercise.aiFormStatus == "Correct"
-                          ? Colors.cyanAccent
-                          : Colors.yellowAccent,
+                      color: exercise.aiFormStatus == "Correct" ? Colors.cyanAccent : Colors.yellowAccent,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              // Tampilan AI untuk Seated Row
+              if (hasSeatedRowAI)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    'AI Coach: ${exercise.aiFeedback}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.cyanAccent,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -407,18 +385,10 @@ class _RealtimeLatihanPageState extends State<RealtimeLatihanPage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '$label: ',
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              color: valueColor,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
-          ),
+          Text('$label: ', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          Text(value,
+              style:
+              TextStyle(color: valueColor, fontWeight: FontWeight.w600, fontSize: 12)),
         ],
       ),
     );

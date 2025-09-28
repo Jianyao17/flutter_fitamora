@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'exercise_guide.dart';
 
 class Exercise {
@@ -30,34 +29,41 @@ class Exercise {
     return Exercise(
       name: json['name'] as String,
       description: json['description'] as String? ?? '',
-      icon: json['icon'] != null
-          ? IconData(json['icon'], fontFamily: 'MaterialIcons')
-          : Icons.fitness_center,
       guides: json['guides'] != null
           ? (json['guides'] as List).map((g) => ExerciseGuide.fromJson(g)).toList()
           : null,
-      sets: json['sets'] as int?,
+      sets: json['set'] as int?,
       rep: json['rep'] as int?,
       duration: json['duration'] as int?,
       rest: json['rest'] as int?,
     );
   }
 
-  String get detailsString
-  {
-    final parts = <String>['$sets set'];
+  String get detailsString {
+    // 1. Mulai dengan list kosong
+    final parts = <String>[];
 
-    // Menambahkan repetisi atau durasi
-    if (rep != null) {
+    // 2. Tambahkan setiap bagian HANYA JIKA nilainya tidak null (dan > 0)
+    if (sets != null && sets! > 0) {
+      parts.add('$sets set');
+    }
+
+    if (rep != null && rep! > 0) {
       parts.add('$rep repetisi');
-    } else if (duration != null) {
+    } else if (duration != null && duration! > 0) {
       parts.add('$duration detik');
     }
 
-    // Menggabungkan bagian utama dengan 'x'
+    // 3. Jika setelah semua pengecekan list masih kosong, berarti tidak ada detail
+    if (parts.isEmpty) {
+      // Mengembalikan string kosong jika tidak ada set, rep, atau durasi
+      return '';
+    }
+
+    // 4. Gabungkan bagian-bagian yang valid
     String mainDetails = parts.join(' x ');
 
-    // Menambahkan informasi istirahat jika ada
+    // 5. Tambahkan informasi istirahat jika ada
     if (rest != null && rest! > 0) {
       mainDetails += ' (istirahat ${rest} dtk)';
     }
