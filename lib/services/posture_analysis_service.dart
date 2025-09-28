@@ -1,186 +1,157 @@
+import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:flutter/services.dart';
-import 'package:image/image.dart' as img;
-import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
-import '../data/posture_database.dart';
+import '../models/exercise/exercise.dart';
 import '../models/posture/posture_analysis.dart';
 import '../models/posture/posture_prediction.dart';
 import '../models/posture/posture_result.dart';
 
-/// Service class untuk menganalisis postur tubuh secara lokal menggunakan TFLite.
+/// Service class untuk menganalisis postur tubuh dengan berkomunikasi ke API server.
 class PostureAnalysisService {
-  // --- Konfigurasi Model ---
-  static const String _modelPath = 'assets/models/posture_model.tflite';
-  static const String _labelsPath = 'assets/models/posture_labels.txt';
-  static const int _inputSize = 224; // Ukuran input sesuai model MobileNetV2
-
-  // --- State TFLite ---
-  Interpreter? _interpreter;
-  List<String>? _labels;
+  // --- Konfigurasi API ---
+  // !!! GANTI DENGAN URL PUBLIK DARI PLATFORM HOSTING ANDA (misal: Railway, Heroku) !!!
+  // Pastikan menggunakan https jika server Anda mengalihkannya.
+  static const String _apiUrl = 'https://flutterfitamora-production.up.railway.app/predict';
 
   /// Private constructor for singleton pattern
   PostureAnalysisService._();
   static final PostureAnalysisService _instance = PostureAnalysisService._();
   factory PostureAnalysisService() => _instance;
 
-  /// Memuat model TFLite dan label dari assets.
-  /// Harus dipanggil sekali sebelum menjalankan analisis.
-  Future<void> _loadModel() async
-  {
-    // Mencegah reload jika sudah ada
-    if (_interpreter != null && _labels != null) {
-      print("Model and labels already loaded.");
-      return;
+  /// Helper function untuk mendapatkan subtype MIME dari path file.
+  /// Ini memastikan Content-Type yang dikirim ke server akurat.
+  String _getMimeType(String filePath) {
+    // Ambil bagian terakhir setelah titik untuk mendapatkan ekstensi
+    final extension = filePath.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'png':
+        return 'png';
+      case 'jpg':
+      case 'jpeg':
+      case 'jfif':
+        return 'jpeg';
+      case 'bmp':
+        return 'bmp';
+      case 'webp':
+        return 'webp';
+      default:
+      // Default ke 'jpeg' jika ekstensi tidak dikenali,
+      // karena ini adalah format yang paling umum.
+        return 'jpeg';
     }
+  }
+
+  /// Menganalisis gambar postur dengan mengirimkannya ke server dan mengembalikan hasil lengkap.
+  /// Ini adalah fungsi utama yang akan dipanggil dari UI.
+  Future<PostureResult> analyzePosture(File imageFile) async {
+    print("🚀 Sending image to posture analysis API...");
 
     try {
-      print("📦 Loading model and labels...");
+      // 1. Membuat permintaan multipart
+      final request = http.MultipartRequest('POST', Uri.parse(_apiUrl));
 
-      // Memuat model
-      _interpreter = await Interpreter.fromAsset(_modelPath);
+      // 2. Melampirkan file gambar dengan Content-Type yang dinamis
+      final mimeType = _getMimeType(imageFile.path);
+      print("   - Detected image type: image/$mimeType");
 
-      // Memuat label
-      final labelsData = await rootBundle.loadString(_labelsPath);
-      _labels = labelsData.split('\n')
-          .map((label) => label.trim())
-          .where((label) => label.isNotEmpty)
-          .toList();
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'image', // field name harus 'image' sesuai dengan API Flask
+          imageFile.path,
+          // Menggunakan tipe MIME yang sudah dideteksi agar sesuai dengan file aslinya
+          contentType: MediaType('image', mimeType),
+        ),
+      );
 
-      print("✅ Model and labels loaded successfully!");
-      print("   - Input tensor: ${_interpreter!.getInputTensor(0).shape}");
-      print("   - Output tensor: ${_interpreter!.getOutputTensor(0).shape}");
-      print("   - Labels: $_labels");
+      // 3. Mengirim permintaan dan menunggu respons
+      // Menambahkan timeout untuk mencegah aplikasi hang jika server tidak merespons
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
 
+      // 4. Membaca dan decode respons
+      final responseBody = await streamedResponse.stream.bytesToString();
+
+      if (streamedResponse.statusCode == 200) {
+        print("✅ API response received successfully!");
+        final Map<String, dynamic> jsonResponse = json.decode(responseBody);
+
+        // Pastikan respons dari server sukses
+        if (jsonResponse['success'] != true) {
+          final error = jsonResponse['error'] ?? 'Unknown error from server';
+          throw Exception('API Error: $error');
+        }
+
+        // 5. Memetakan (mapping) respons JSON ke model Dart yang ada
+        return _mapResponseToPostureResult(jsonResponse);
+      } else {
+        // Menangani error dari server (misal: 400, 500)
+        print("❌ API request failed with status: ${streamedResponse.statusCode}");
+        print("   Error body: $responseBody");
+        throw Exception(
+            'Failed to analyze posture. Server returned status ${streamedResponse.statusCode}');
+      }
     } catch (e) {
-      print("❌ Failed to load model or labels: $e");
-      _interpreter = null;
-      _labels = null;
-      throw Exception("Could not initialize posture analysis service.");
+      // Menangani error jaringan, timeout, atau lainnya
+      print("❌ An error occurred during posture analysis: $e");
+      throw Exception(
+          "Could not connect to the analysis service. Please check your network connection and try again.");
     }
   }
 
-  /// Memproses gambar input menjadi format yang sesuai untuk model TFLite.
-  /// 1. Decode gambar
-  /// 2. Resize ke 224x224
-  /// 3. Normalisasi piksel (0-255 -> 0-1)
-  /// 4. Ubah menjadi Float32List
-  Future<Uint8List> _preprocessImage(File imageFile) async
+  /// Helper function untuk mengubah respons JSON dari server menjadi objek PostureResult.
+  PostureResult _mapResponseToPostureResult(Map<String, dynamic> json)
   {
-    print("🔍 Preprocessing image...");
+    // Ekstrak data utama dari JSON
+    final predictionData = json['prediction'] as Map<String, dynamic>;
+    final analysisData = json['analysis'] as Map<String, dynamic>;
+    final detailedPredictions =
+    json['detailed_predictions'] as Map<String, dynamic>;
 
-    // 1. Baca dan decode gambar menggunakan package 'image'
-    final imageBytes = await imageFile.readAsBytes();
-    final originalImage = img.decodeImage(imageBytes);
-
-    if (originalImage == null) {
-      throw Exception("Failed to decode image.");
-    }
-
-    // 2. Resize gambar
-    final resizedImage = img.copyResize(
-      originalImage,
-      width: _inputSize,
-      height: _inputSize,
+    // Membuat objek PosturePrediction
+    final posturePrediction = PosturePrediction(
+      className: predictionData['primary_status'] as String,
+      confidence: (predictionData['overall_confidence'] as num).toDouble() * 100.0,
+      status: analysisData['status'] as String,
     );
 
-    // 3. Konversi ke Float32List dan normalisasi
-    // Model MobileNetV2 mengharapkan input [1, 224, 224, 3]
-    // Nilai piksel dinormalisasi antara 0 dan 1
-    final imageBytesAsFloat = Float32List(_inputSize * _inputSize * 3);
-    int bufferIndex = 0;
-    for (int y = 0; y < resizedImage.height; y++) {
-      for (int x = 0; x < resizedImage.width; x++) {
-        final pixel = resizedImage.getPixel(x, y);
-        imageBytesAsFloat[bufferIndex++] = pixel.r / 255.0;
-        imageBytesAsFloat[bufferIndex++] = pixel.g / 255.0;
-        imageBytesAsFloat[bufferIndex++] = pixel.b / 255.0;
-      }
-    }
+    // Membuat objek PostureAnalysis
+    final List<Exercise> exerciseProgram =
+    (analysisData['exercise_program'] as List)
+        .map((e) => Exercise.fromJson(e as Map<String, dynamic>))
+        .toList();
 
-    // Reshape ke [1, 224, 224, 3]
-    return imageBytesAsFloat.buffer.asUint8List();
-  }
+    final postureAnalysis = PostureAnalysis(
+      problems: List<String>.from(analysisData['problems'] as List),
+      suggestions: List<String>.from(analysisData['suggestions'] as List),
+      colorHex: analysisData['color'] as String,
+      exerciseProgram: exerciseProgram,
+    );
 
-
-  /// Menganalisis gambar postur dan mengembalikan hasil lengkap.
-  /// Ini adalah fungsi utama yang akan dipanggil dari UI.
-  Future<PostureResult> analyzePosture(File imageFile) async
-  {
-    // Pastikan model sudah dimuat
-    await _loadModel();
-
-    if (_interpreter == null || _labels == null) {
-      throw Exception("Service not initialized. Call _loadModel() first.");
-    }
-
-    // 1. Preprocess gambar
-    final input = await _preprocessImage(imageFile);
-
-    // Output model memiliki shape [1, 3] sesuai jumlah kelas
-    final output = List.filled(1 * _labels!.length, 0.0).reshape([1, _labels!.length]);
-
-    // 2. Jalankan inferensi
-    print("🔮 Running model prediction...");
-    _interpreter!.run(input.buffer.asFloat32List().reshape([1, _inputSize, _inputSize, 3]), output);
-
-    // 3. Post-process hasil
-    final List<double> scores = output[0] as List<double>;
-    print("📊 Raw prediction scores: $scores");
-
-    // Cari indeks dengan skor tertinggi
-    double maxScore = 0;
-    int maxIndex = -1;
-    for (int i = 0; i < scores.length; i++) {
-      if (scores[i] > maxScore) {
-        maxScore = scores[i];
-        maxIndex = i;
-      }
-    }
-
-    if (maxIndex == -1) {
-      throw Exception("Failed to get prediction from model.");
-    }
-
-    final predictedClass = _labels![maxIndex];
-    final confidence = maxScore * 100;
-
-    print("✅ Prediction successful!");
-    print("   - Class: $predictedClass");
-    print("   - Confidence: ${confidence.toStringAsFixed(2)}%");
-
-    // 4. Dapatkan analisis detail berdasarkan kelas prediksi
-    final analysis = PostureDatabase.getPostureItemAnalysis(predictedClass);
-    print(analysis.name);
-
-    // 5. Buat mapping probabilitas kelas
+    // Membuat map probabilitas kelas
     final Map<String, double> classProbabilities = {};
-    for (int i = 0; i < _labels!.length; i++) {
-      classProbabilities[_labels![i]] = scores[i] * 100;
-    }
+    detailedPredictions.forEach((key, value) {
+      classProbabilities[key] =
+          (value['probability'] as num).toDouble() * 100.0;
+    });
 
-    // 6. Gabungkan semua data menjadi satu objek PostureResult
+    print("📊 Mapped data successfully!");
+    print("   - Predicted Class: ${posturePrediction.className}");
+    print("   - Confidence: ${posturePrediction.confidence.toStringAsFixed(2)}%");
+    print("   - Status: ${analysisData['status']}");
+
+    // Menggabungkan semua menjadi objek PostureResult
     return PostureResult(
-      prediction: PosturePrediction(
-        className: predictedClass,
-        confidence: confidence,
-        status: analysis.status, // Ambil status dari analisis
-      ),
-      analysis: PostureAnalysis(
-        problems: analysis.problems,
-        suggestions: analysis.suggestions,
-        colorHex: analysis.colorHex,
-        exerciseProgram: analysis.exerciseProgram,
-      ),
+      prediction: posturePrediction,
+      analysis: postureAnalysis,
       classProbabilities: classProbabilities,
     );
   }
 
-  // Helper function untuk memformat nama kelas
-  static String formatClassName(String className)
-  => className.split('_')
+  // Helper function untuk memformat nama kelas (dapat dipertahankan jika masih berguna di UI)
+  static String formatClassName(String className) => className
+      .split('_')
       .map((word) => word[0].toUpperCase() + word.substring(1))
       .join(' ');
 }

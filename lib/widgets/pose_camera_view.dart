@@ -3,9 +3,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 
-import '../models/pose_mediapipe/pose_detection_result.dart';
 import '../services/pose_detection_service.dart';
-import 'pose_rigging_painter.dart';
 
 class PoseCameraView extends StatefulWidget {
   final bool useFrontCamera;
